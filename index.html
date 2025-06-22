@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MineCraft</title>
+    <style>
+        @font-face {
+            font-family: 'Minecraft';
+            src: url('https://assets.codepen.io/1213385/MinecraftRegular-Bmg3.otf') format('opentype');
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background-image: url('https://i.postimg.cc/7Y10YXJb/56-20250621141107.png');
+            background-size: 128px 128px;
+            background-repeat: repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Minecraft', sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        .logo {
+            margin-bottom: 30px;
+            max-width: 80%;
+            transition: opacity 0.3s ease;
+        }
+
+        .play-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: transform 0.2s;
+            font-family: 'Minecraft';
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .play-button:hover {
+            transform: scale(1.1);
+            color: #FFFF55;
+        }
+
+        .version-selector {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .version-button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Minecraft';
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .version-button:hover {
+            color: #FFFF55;
+        }
+
+        .engine-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px 15px;
+            font-family: 'Minecraft';
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .engine-button:hover {
+            color: #FFFF55;
+        }
+    </style>
+</head>
+<body>
+    <button class="engine-button" onclick="window.location.href='MineScriptEngine.html'">Mine Script Engine</button>
+    
+    <img src="https://i.postimg.cc/8P1kVbR1/59-20250621141642.png" alt="Logo" class="logo" id="logo">
+
+    <button class="play-button" onclick="showVersions()">Play</button>
+
+    <div class="version-selector" id="versionSelector">
+        <button class="version-button" onclick="window.location.href='Minecraft4k-0144OLD.html'">4K-OLD (Original)</button>
+        <button class="version-button" onclick="window.location.href='Minecraft4k-0144.html'">4K-NEW (Optimized)</button>
+        <button class="version-button" onclick="window.location.href='RD132211Optimize.html'">RD132211</button>
+    </div>
+
+    <script>
+        function showVersions() {
+            document.getElementById('logo').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('logo').style.display = 'none';
+                document.getElementById('versionSelector').style.display = 'flex';
+                document.querySelector('.play-button').style.display = 'none';
+            }, 300);
+        }
+    </script>
+</body>
+</html>

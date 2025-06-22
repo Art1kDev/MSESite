@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minecraft 4K</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            background: url('https://i.postimg.cc/kg78cjJ8/56-20250621102335.png');
+            background-size: 128px 128px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+            text-shadow: 0 0 5px white;
+        }
+        #gameContainer {
+            margin: 0 auto;
+            display: inline-block;
+            position: relative;
+            border: 2px solid #333;
+            background: rgba(0, 0, 0, 0.7);
+        }
+        canvas {
+            display: block;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .instructions {
+            margin-top: 10px;
+            color: #666;
+            font-size: 12px;
+            text-shadow: 0 0 3px white;
+        }
+        
+        /* Mobile controls */
+        #mobileControls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 180px;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        #movementPad {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+        }
+        
+        #joystick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            left: 35px;
+            top: 35px;
+            touch-action: none;
+        }
+        
+        #actionButtons {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .actionBtn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            pointer-events: auto;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        #jumpBtn {
+            background: rgba(0, 100, 255, 0.5);
+        }
+        
+        #breakBtn {
+            background: rgba(255, 50, 50, 0.5);
+        }
+        
+        #placeBtn {
+            background: rgba(50, 255, 50, 0.5);
+        }
+        
+        #fullscreenBtn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            z-index: 100;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 1024px) {
+            #mobileControls {
+                display: block;
+            }
+            .instructions {
+                display: none;
+            }
+            #fullscreenBtn {
+                display: block;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            #fullscreenBtn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Minecraft 4K</h1>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="856" height="480"></canvas>
+        <div id="mobileControls">
+            <div id="movementPad">
+                <div id="joystick"></div>
+            </div>
+            <div id="actionButtons">
+                <div id="jumpBtn" class="actionBtn">↑</div>
+                <div id="breakBtn" class="actionBtn">✖</div>
+                <div id="placeBtn" class="actionBtn">■</div>
+            </div>
+        </div>
+    </div>
+    <div id="fullscreenBtn">⛶</div>
+    <div class="instructions">
+        Use WASD to move, mouse to look around, left click to place blocks, right click to remove blocks
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const M = new Array(32767).fill(0);
+        
+        // Game state
+        let world = new Array(262144);
+        let textures = new Array(12288);
+        let playerX = 96.5, playerY = 65.0, playerZ = 96.5;
+        let velocityX = 0, velocityY = 0, velocityZ = 0;
+        let rotationX = 0, rotationY = 0;
+        let selectedBlock = -1;
+        let selectedFace = 0;
+        let lastTime = 0;
+        
+        // Touch controls state
+        let joystickActive = false;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
+        let joystickX = 0;
+        let joystickY = 0;
+        let isDragging = false;
+        
+        // Initialize the game
+        function init() {
+            // Initialize random world
+            const random = new Random(18295169);
+            for (let i = 0; i < 262144; i++) {
+                world[i] = Math.floor(i / 64) % 64 > 32 + random.nextInt(8) ? random.nextInt(8) + 1 : 0;
+            }
+            
+            // Initialize textures
+            for (let i = 1; i < 16; i++) {
+                let brightness = 255 - random.nextInt(96);
+                
+                for (let u = 0; u < 48; u++) {
+                    for (let v = 0; v < 16; v++) {
+                        let color = 0x965812; // Default color (dirt-like)
+                        
+                        if (i === 4) { // Grass
+                            color = 0x7F857F;
+                            if (random.nextInt(3) !== 0) {
+                                brightness = 255 - random.nextInt(96);
+                            }
+                        } else if (i === 1) { // Stone
+                            if (u < ((v * v * 3 + v * 81) >> 2 & 3) + 18) {
+                                color = 0x6A9A40; // Grass side
+                            } else if (u < ((v * v * 3 + v * 81) >> 2 & 3) + 19) {
+                                brightness = brightness * 2 / 3;
+                            }
+                        } else if (i === 7) { // Wood
+                            color = 0x675C31;
+                            if (v <= 0 || v >= 15 || (u <= 0 || u >= 15) && (u <= 32 || u >= 47)) {
+                                if (random.nextInt(2) === 0) {
+                                    brightness = brightness * (150 - (v & 1) * 100) / 100;
+                                }
+                            } else {
+                                color = 0xBC9B42; // Wood rings
+                                let distV = Math.abs(v - 7);
+                                let distU = Math.abs((u & 15) - 7);
+                                if (distU > distV) distV = distU;
+                                brightness = 196 - random.nextInt(32) + distV % 3 * 32;
+                            }
+                        } else if (i === 5) { // Brick
+                            color = 0xB54335;
+                            if ((v + Math.floor(u / 4) * 4) % 8 === 0 || u % 4 === 0) {
+                                color = 0xBCB4A5; // Brick mortar
+                            }
+                        }
+                        
+                        if (u >= 32) {
+                            brightness /= 2;
+                        }
+                        
+                        if (i === 8) { // Leaves
+                            color = 0x50D6F7;
+                            if (random.nextInt(2) === 0) {
+                                color = 0;
+                                brightness = 255;
+                            }
+                        }
+                        
+                        // Apply brightness to color
+                        const r = ((color >> 16) & 255) * brightness / 255;
+                        const g = ((color >> 8) & 255) * brightness / 255;
+                        const b = (color & 255) * brightness / 255;
+                        textures[v + u * 16 + i * 256 * 3] = (r << 16) | (g << 8) | b;
+                    }
+                }
+            }
+            
+            // Setup event listeners
+            document.addEventListener('keydown', (e) => handleKey(e, 1));
+            document.addEventListener('keyup', (e) => handleKey(e, 0));
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            
+            // Touch event listeners
+            const joystick = document.getElementById('joystick');
+            const movementPad = document.getElementById('movementPad');
+            
+            movementPad.addEventListener('touchstart', handleJoystickStart, { passive: false });
+            movementPad.addEventListener('touchmove', handleJoystickMove, { passive: false });
+            movementPad.addEventListener('touchend', handleJoystickEnd, { passive: false });
+            
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // Mobile control buttons
+            document.getElementById('jumpBtn').addEventListener('touchstart', () => M[32] = 1);
+            document.getElementById('jumpBtn').addEventListener('touchend', () => M[32] = 0);
+            document.getElementById('breakBtn').addEventListener('touchstart', () => M[1] = 1);
+            document.getElementById('breakBtn').addEventListener('touchend', () => M[1] = 0);
+            document.getElementById('placeBtn').addEventListener('touchstart', () => M[0] = 1);
+            document.getElementById('placeBtn').addEventListener('touchend', () => M[0] = 0);
+            
+            // Fullscreen button
+            document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+            
+            // Handle fullscreen change
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+            
+            // Start game loop
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Game loop
+        function gameLoop(timestamp) {
+            const deltaTime = Math.min(timestamp - lastTime, 100) / 1000;
+            lastTime = timestamp;
+            
+            // Handle movement
+            updatePlayer(deltaTime);
+            
+            // Render
+            render();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Update player position and physics
+        function updatePlayer(deltaTime) {
+            const sinX = Math.sin(rotationX);
+            const cosX = Math.cos(rotationX);
+            const sinY = Math.sin(rotationY);
+            const cosY = Math.cos(rotationY);
+            
+            // Apply controls
+            let moveX = 0, moveZ = 0;
+            
+            // Joystick movement
+            if (joystickActive) {
+                const joyDist = Math.sqrt(joystickX * joystickX + joystickY * joystickY);
+                const maxDist = 40;
+                const normalizedX = joystickX / maxDist;
+                const normalizedY = joystickY / maxDist;
+                
+                if (joyDist > 5) {
+                    moveZ = -normalizedY * 0.03;
+                    moveX = normalizedX * 0.03;
+                }
+            }
+            
+            // Keyboard movement (fallback)
+            moveZ += (M[119] - M[115]) * 0.02; // W/S
+            moveX += (M[100] - M[97]) * 0.02;   // A/D
+            
+            // Apply friction
+            velocityX *= 0.5;
+            velocityZ *= 0.5;
+            velocityY *= 0.99;
+            
+            // Apply movement forces
+            velocityX += sinX * moveZ + cosX * moveX;
+            velocityZ += cosX * moveZ - sinX * moveX;
+            velocityY += 0.003; // Gravity
+            
+            // Collision detection
+            for (let i = 0; i < 3; i++) {
+                let newX = playerX + velocityX * ((i + 0) % 3 / 2);
+                let newY = playerY + velocityY * ((i + 1) % 3 / 2);
+                let newZ = playerZ + velocityZ * ((i + 2) % 3 / 2);
+                
+                let collided = false;
+                
+                // Check all 12 points of player's collision box
+                for (let j = 0; j < 12; j++) {
+                    const checkX = Math.floor(newX + ((j >> 0) & 1) * 0.6 - 0.3) - 64;
+                    const checkY = Math.floor(newY + ((j >> 2) - 1) * 0.8 + 0.65) - 64;
+                    const checkZ = Math.floor(newZ + ((j >> 1) & 1) * 0.6 - 0.3) - 64;
+                    
+                    if (checkX < 0 || checkY < 0 || checkZ < 0 || 
+                        checkX >= 64 || checkY >= 64 || checkZ >= 64 || 
+                        world[checkX + checkY * 64 + checkZ * 4096] > 0) {
+                        collided = true;
+                        
+                        // Special handling for jumping/landing
+                        if (i === 1) {
+                            if (M[32] > 0 && velocityY > 0) { // Jump key pressed
+                                M[32] = 0;
+                                velocityY = -0.1; // Bounce
+                            } else {
+                                velocityY = 0; // Stop vertical movement
+                            }
+                        }
+                        break;
+                    }
+                }
+                
+                if (!collided) {
+                    playerX = newX;
+                    playerY = newY;
+                    playerZ = newZ;
+                }
+            }
+            
+            // Handle block placement/removal
+            if (M[1] > 0 && selectedBlock > 0) { // Right click (remove block)
+                world[selectedBlock] = 0;
+                M[1] = 0;
+            }
+            
+            if (M[0] > 0 && selectedBlock > 0) { // Left click (place block)
+                world[selectedBlock + selectedFace] = 1;
+                M[0] = 0;
+            }
+            
+            // Clear blocks around player (so they don't get stuck)
+            for (let i = 0; i < 12; i++) {
+                const clearX = Math.floor(playerX + ((i >> 0) & 1) * 0.6 - 0.3) - 64;
+                const clearY = Math.floor(playerY + ((i >> 2) - 1) * 0.8 + 0.65) - 64;
+                const clearZ = Math.floor(playerZ + ((i >> 1) & 1) * 0.6 - 0.3) - 64;
+                
+                if (clearX >= 0 && clearY >= 0 && clearZ >= 0 && 
+                    clearX < 64 && clearY < 64 && clearZ < 64) {
+                    world[clearX + clearY * 64 + clearZ * 4096] = 0;
+                }
+            }
+        }
+        
+        // Render the world
+        function render() {
+            const width = 214;
+            const height = 120;
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            
+            const sinX = Math.sin(rotationX);
+            const cosX = Math.cos(rotationX);
+            const sinY = Math.sin(rotationY);
+            const cosY = Math.cos(rotationY);
+            
+            selectedBlock = -1;
+            let closestDistance = 5.0;
+            
+            for (let x = 0; x < width; x++) {
+                const screenX = (x - 107) / 90.0;
+                
+                for (let y = 0; y < height; y++) {
+                    const screenY = (y - 60) / 90.0;
+                    
+                    // Calculate ray direction
+                    let rayX = 1.0;
+                    let rayY = screenY;
+                    let rayZ = rayX * cosY + rayY * sinY;
+                    rayY = rayY * cosY - rayX * sinY;
+                    
+                    // Rotate ray by X axis
+                    rayX = screenX * cosX + rayZ * sinX;
+                    rayZ = rayZ * cosX - screenX * sinX;
+                    
+                    let color = 0;
+                    let brightness = 255;
+                    let maxDistance = 20.0;
+                    let hitDistance = 5.0;
+                    
+                    // Check all 3 axes for collisions
+                    for (let axis = 0; axis < 3; axis++) {
+                        let axisRay = rayX;
+                        if (axis === 1) axisRay = rayY;
+                        if (axis === 2) axisRay = rayZ;
+                        
+                        if (Math.abs(axisRay) < 0.0001) continue;
+                        
+                        const invRay = 1.0 / Math.abs(axisRay);
+                        const stepX = rayX * invRay;
+                        const stepY = rayY * invRay;
+                        const stepZ = rayZ * invRay;
+                        
+                        let offset = playerX - Math.floor(playerX);
+                        if (axis === 1) offset = playerY - Math.floor(playerY);
+                        if (axis === 2) offset = playerZ - Math.floor(playerZ);
+                        
+                        if (axisRay > 0.0) {
+                            offset = 1.0 - offset;
+                        }
+                        
+                        let distance = invRay * offset;
+                        let posX = playerX + rayX * offset;
+                        let posY = playerY + rayY * offset;
+                        let posZ = playerZ + rayZ * offset;
+                        
+                        if (axisRay < 0.0) {
+                            if (axis === 0) posX--;
+                            if (axis === 1) posY--;
+                            if (axis === 2) posZ--;
+                        }
+                        
+                        while (distance < maxDistance) {
+                            const blockX = Math.floor(posX) - 64;
+                            const blockY = Math.floor(posY) - 64;
+                            const blockZ = Math.floor(posZ) - 64;
+                            
+                            if (blockX < 0 || blockY < 0 || blockZ < 0 || 
+                                blockX >= 64 || blockY >= 64 || blockZ >= 64) {
+                                break;
+                            }
+                            
+                            const blockIndex = blockX + blockY * 64 + blockZ * 4096;
+                            const blockType = world[blockIndex];
+                            
+                            if (blockType > 0) {
+                                // Calculate texture coordinates
+                                let texU = Math.floor((posX + posZ) * 16) & 15;
+                                let texV = (Math.floor(posY * 16) & 15) + 16;
+                                
+                                if (axis === 1) {
+                                    texU = Math.floor(posX * 16) & 15;
+                                    texV = Math.floor(posZ * 16) & 15;
+                                    if (rayY < 0.0) {
+                                        texV += 32;
+                                    }
+                                }
+                                
+                                // Get block color
+                                let blockColor = 0xFFFFFF;
+                                if (blockIndex !== selectedBlock || 
+                                    (texU > 0 && texV % 16 > 0 && texU < 15 && texV % 16 < 15)) {
+                                    blockColor = textures[texU + texV * 16 + blockType * 256 * 3] || 0;
+                                }
+                                
+                                // Check if this block is being pointed at by mouse
+                                if (distance < hitDistance && x === Math.floor(M[2] / 4) && y === Math.floor(M[3] / 4)) {
+                                    selectedBlock = blockIndex;
+                                    let faceDir = 1;
+                                    if (axisRay > 0.0) faceDir = -1;
+                                    selectedFace = faceDir << (6 * axis);
+                                    hitDistance = distance;
+                                }
+                                
+                                if (blockColor > 0) {
+                                    color = blockColor;
+                                    brightness = 255 - Math.floor(distance / 20.0 * 255.0);
+                                    brightness = brightness * (255 - (axis + 2) % 3 * 50) / 255;
+                                    maxDistance = distance;
+                                }
+                            }
+                            
+                            posX += stepX;
+                            posY += stepY;
+                            posZ += stepZ;
+                            distance += invRay;
+                        }
+                    }
+                    
+                    // Apply color to pixel
+                    const r = ((color >> 16) & 255) * brightness / 255;
+                    const g = ((color >> 8) & 255) * brightness / 255;
+                    const b = (color & 255) * brightness / 255;
+                    const pixelIndex = (y * width + x) * 4;
+                    
+                    data[pixelIndex] = r;
+                    data[pixelIndex + 1] = g;
+                    data[pixelIndex + 2] = b;
+                    data[pixelIndex + 3] = 255; // Alpha
+                }
+            }
+            
+            // Draw to canvas (scaled up)
+            ctx.putImageData(imageData, 0, 0);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(canvas, 0, 0, width, height, 0, 0, canvas.width, canvas.height);
+        }
+        
+        // Event handlers
+        function handleKey(e, state) {
+            // WASD movement
+            if (e.keyCode === 87) M[119] = state; // W
+            if (e.keyCode === 65) M[97] = state;  // A
+            if (e.keyCode === 83) M[115] = state; // S
+            if (e.keyCode === 68) M[100] = state; // D
+            
+            // Space for jump
+            if (e.keyCode === 32) M[32] = state;  // Space
+        }
+        
+        function handleMouseDown(e) {
+            if (e.button === 0) M[0] = 1; // Left click
+            if (e.button === 2) M[1] = 1; // Right click
+            M[2] = e.clientX - canvas.offsetLeft;
+            M[3] = e.clientY - canvas.offsetTop;
+        }
+        
+        function handleMouseUp(e) {
+            if (e.button === 0) M[0] = 0;
+            if (e.button === 2) M[1] = 0;
+            M[2] = e.clientX - canvas.offsetLeft;
+            M[3] = e.clientY - canvas.offsetTop;
+        }
+        
+        function handleMouseMove(e) {
+            if (document.pointerLockElement === canvas || e.buttons > 0) {
+                const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
+                const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
+                
+                rotationX -= movementX * 0.002;
+                rotationY -= movementY * 0.002;
+                
+                // Clamp vertical rotation
+                rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
+            }
+            
+            M[2] = e.clientX - canvas.offsetLeft;
+            M[3] = e.clientY - canvas.offsetTop;
+        }
+        
+        // Joystick handlers
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const rect = e.target.getBoundingClientRect();
+                joystickStartX = rect.left + rect.width / 2;
+                joystickStartY = rect.top + rect.height / 2;
+                joystickX = touch.clientX - joystickStartX;
+                joystickY = touch.clientY - joystickStartY;
+                joystickActive = true;
+                updateJoystickPosition();
+            }
+        }
+        
+        function handleJoystickMove(e) {
+            e.preventDefault();
+            if (joystickActive && e.touches.length === 1) {
+                const touch = e.touches[0];
+                joystickX = touch.clientX - joystickStartX;
+                joystickY = touch.clientY - joystickStartY;
+                
+                // Limit joystick to the pad area
+                const maxDist = 40;
+                const dist = Math.sqrt(joystickX * joystickX + joystickY * joystickY);
+                if (dist > maxDist) {
+                    joystickX = (joystickX / dist) * maxDist;
+                    joystickY = (joystickY / dist) * maxDist;
+                }
+                
+                updateJoystickPosition();
+            }
+        }
+        
+        function handleJoystickEnd(e) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickX = 0;
+            joystickY = 0;
+            updateJoystickPosition();
+        }
+        
+        function updateJoystickPosition() {
+            const joystick = document.getElementById('joystick');
+            joystick.style.transform = `translate(${joystickX}px, ${joystickY}px)`;
+        }
+        
+        // Touch event handlers
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (e.touches.length === 1 && !joystickActive) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isDragging = true;
+            }
+        }
+        
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (isDragging && e.touches.length === 1 && !joystickActive) {
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const deltaX = touchX - touchStartX;
+                const deltaY = touchY - touchStartY;
+                
+                rotationX -= deltaX * 0.01;
+                rotationY -= deltaY * 0.01;
+                
+                // Clamp vertical rotation
+                rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
+                
+                touchStartX = touchX;
+                touchStartY = touchY;
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            isDragging = false;
+        }
+        
+        // Fullscreen functions
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && !document.msFullscreenElement) {
+                // Enter fullscreen
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+        
+        function handleFullscreenChange() {
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                               document.mozFullScreenElement || document.msFullscreenElement;
+            
+            if (isFullscreen) {
+                // Adjust canvas size for fullscreen
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            } else {
+                // Restore original canvas size
+                canvas.width = 856;
+                canvas.height = 480;
+            }
+        }
+        
+        // Simple random number generator (like Java's)
+        function Random(seed) {
+            this.seed = seed;
+            this.nextInt = function(bound) {
+                this.seed = (this.seed * 214013 + 2531011) & 0xFFFFFFFF;
+                return (this.seed >> 16) % bound;
+            };
+        }
+        
+        // Start the game
+        init();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,474 @@
+ <!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>RD132211</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block; 
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 24px;
+            height: 24px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0.5;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background-color: white;
+        }
+        #crosshair::before {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #crosshair::after {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+    <div id="crosshair"></div>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/PointerLockControls.js"></script>
+    <script>
+        const WORLD_WIDTH = 64;
+        const WORLD_DEPTH = 64;
+        const BLOCK_SIZE = 1;
+        const MAX_BUILD_DISTANCE = 5;
+        
+        const WORLD_POSITION = { x: 0, y: 0, z: 0 };
+        const SPAWN_POINT = { x: 0, y: 3, z: 0 };
+        
+        let scene, camera, renderer, controls;
+        let world = {};
+        let raycaster = new THREE.Raycaster();
+        let clock = new THREE.Clock();
+        let stoneTexture, dirtTexture, grassTexture;
+        let highlightedBlock = null;
+        let highlightStartTime = 0;
+
+        let player = {
+            position: new THREE.Vector3(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z),
+            velocity: new THREE.Vector3(),
+            moveForward: false,
+            moveBackward: false,
+            moveLeft: false,
+            moveRight: false,
+            canJump: false,
+            height: 1.8,
+            radius: 0.3,
+            speed: 4.0,
+            jumpHeight: 8
+        };
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x7fccff);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.copy(player.position);
+            camera.position.y += player.height;
+            
+            renderer = new THREE.WebGLRenderer({ antialias: false });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(100, 100, 50);
+            scene.add(directionalLight);
+            
+            const textureLoader = new THREE.TextureLoader();
+            stoneTexture = textureLoader.load('https://i.postimg.cc/Dw9KdZ9N/5382343738950545341.jpg');
+            stoneTexture.wrapS = stoneTexture.wrapT = THREE.RepeatWrapping;
+            stoneTexture.repeat.set(1, 1);
+            
+            dirtTexture = textureLoader.load('https://i.postimg.cc/15wv8rGb/5382343738950545340.jpg');
+            dirtTexture.wrapS = dirtTexture.wrapT = THREE.RepeatWrapping;
+            dirtTexture.repeat.set(1, 1);
+            
+            grassTexture = textureLoader.load('https://i.postimg.cc/8zYQ0X9K/grass.jpg');
+            grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
+            grassTexture.repeat.set(1, 1);
+            
+            loadWorld();
+            setupControls();
+            
+            setTimeout(() => {
+                controls.lock();
+            }, 100);
+            
+            animate();
+        }
+        
+        function generateLayeredWorld() {
+            for (let x = -WORLD_WIDTH/2; x < WORLD_WIDTH/2; x++) {
+                for (let z = -WORLD_DEPTH/2; z < WORLD_DEPTH/2; z++) {
+                    addBlock(x, -1, z, 'dirt');
+                    
+                    for (let y = -2; y >= -5; y--) {
+                        addBlock(x, y, z, 'stone');
+                    }
+                }
+            }
+            saveWorld();
+        }
+        
+        function addBlock(x, y, z, type) {
+            const key = `${x},${y},${z}`;
+            if (world[key]) return;
+            
+            const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            let material;
+            
+            switch(type) {
+                case 'grass':
+                    material = [
+                        new THREE.MeshStandardMaterial({ map: dirtTexture }),
+                        new THREE.MeshStandardMaterial({ map: grassTexture }),
+                        new THREE.MeshStandardMaterial({ map: dirtTexture }),
+                        new THREE.MeshStandardMaterial({ map: dirtTexture }),
+                        new THREE.MeshStandardMaterial({ map: dirtTexture }),
+                        new THREE.MeshStandardMaterial({ map: dirtTexture })
+                    ];
+                    break;
+                case 'dirt':
+                    material = new THREE.MeshStandardMaterial({ map: dirtTexture });
+                    break;
+                case 'stone':
+                    material = new THREE.MeshStandardMaterial({ map: stoneTexture });
+                    break;
+                default:
+                    material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            }
+            
+            const cube = Array.isArray(material) 
+                ? new THREE.Mesh(geometry, material)
+                : new THREE.Mesh(geometry, material);
+            
+            cube.position.set(
+                x + BLOCK_SIZE/2, 
+                y + BLOCK_SIZE/2, 
+                z + BLOCK_SIZE/2
+            );
+            
+            scene.add(cube);
+            world[key] = { mesh: cube, type: type, originalMaterials: Array.isArray(material) ? material.map(m => m.clone()) : material.clone() };
+        }
+        
+        function saveWorld() {
+            const worldData = {};
+            for (const key in world) {
+                worldData[key] = world[key].type;
+            }
+            localStorage.setItem('minecraftWorld', JSON.stringify(worldData));
+        }
+        
+        function loadWorld() {
+            const savedWorld = localStorage.getItem('minecraftWorld');
+            if (savedWorld) {
+                const worldData = JSON.parse(savedWorld);
+                for (const key in worldData) {
+                    const [x, y, z] = key.split(',').map(Number);
+                    addBlock(x, y, z, worldData[key]);
+                }
+            } else {
+                generateLayeredWorld();
+            }
+        }
+        
+        function highlightBlock(block) {
+            if (highlightedBlock && highlightedBlock !== block) {
+                resetBlockHighlight(highlightedBlock);
+            }
+            
+            highlightedBlock = block;
+            highlightStartTime = performance.now();
+        }
+        
+        function resetBlockHighlight(block) {
+            if (!block) return;
+            
+            if (Array.isArray(block.mesh.material)) {
+                block.mesh.material.forEach((mat, i) => {
+                    mat.color.copy(block.originalMaterials[i].color);
+                });
+            } else {
+                block.mesh.material.color.copy(block.originalMaterials.color);
+            }
+        }
+        
+        function updateHighlight() {
+            if (!highlightedBlock) return;
+            
+            const elapsed = (performance.now() - highlightStartTime) / 1000;
+            const progress = (elapsed % 1.0) / 1.0;
+            const whiteIntensity = Math.sin(progress * Math.PI);
+            
+            if (Array.isArray(highlightedBlock.mesh.material)) {
+                highlightedBlock.mesh.material.forEach((mat, i) => {
+                    const originalColor = highlightedBlock.originalMaterials[i].color;
+                    mat.color.lerpColors(originalColor, new THREE.Color(0xffffff), whiteIntensity);
+                });
+            } else {
+                const originalColor = highlightedBlock.originalMaterials.color;
+                highlightedBlock.mesh.material.color.lerpColors(originalColor, new THREE.Color(0xffffff), whiteIntensity);
+            }
+        }
+        
+        function setupControls() {
+            controls = new THREE.PointerLockControls(camera, document.body);
+            
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function respawnPlayer() {
+            player.position.set(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z);
+            player.velocity.set(0, 0, 0);
+            player.canJump = false;
+            
+            if (controls.isLocked) {
+                controls.getObject().position.copy(player.position);
+                controls.getObject().position.y += player.height;
+            }
+        }
+        
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW': player.moveForward = true; break;
+                case 'KeyS': player.moveBackward = true; break;
+                case 'KeyA': player.moveRight = true; break;
+                case 'KeyD': player.moveLeft = true; break;
+                case 'Space': if (player.canJump) player.velocity.y = player.jumpHeight; player.canJump = false; break;
+                case 'KeyR': respawnPlayer(); break;
+                case 'Escape': 
+                    if (controls.isLocked) {
+                        controls.unlock();
+                    }
+                    break;
+            }
+        }
+        
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': player.moveForward = false; break;
+                case 'KeyS': player.moveBackward = false; break;
+                case 'KeyA': player.moveRight = false; break;
+                case 'KeyD': player.moveLeft = false; break;
+            }
+        }
+        
+        function onMouseDown(event) {
+            if (!controls.isLocked) {
+                controls.lock();
+                return;
+            }
+            
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            
+            const intersects = raycaster.intersectObjects(Object.values(world).map(b => b.mesh));
+            
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                
+                if (intersect.distance > MAX_BUILD_DISTANCE) return;
+                
+                const blockPos = intersect.object.position.clone();
+                blockPos.x = Math.floor(blockPos.x - BLOCK_SIZE/2);
+                blockPos.y = Math.floor(blockPos.y - BLOCK_SIZE/2);
+                blockPos.z = Math.floor(blockPos.z - BLOCK_SIZE/2);
+                
+                if (event.button === 0) {
+                    removeBlock(blockPos.x, blockPos.y, blockPos.z);
+                } else if (event.button === 2) {
+                    const normal = intersect.face.normal.clone();
+                    normal.x = Math.round(normal.x);
+                    normal.y = Math.round(normal.y);
+                    normal.z = Math.round(normal.z);
+                    
+                    const newPos = blockPos.clone().add(normal);
+                    
+                    const newBlockDistance = player.position.distanceTo(
+                        new THREE.Vector3(newPos.x + BLOCK_SIZE/2, newPos.y + BLOCK_SIZE/2, newPos.z + BLOCK_SIZE/2)
+                    );
+                    if (newBlockDistance > MAX_BUILD_DISTANCE) return;
+                    
+                    let blockType = 'stone';
+                    if (newPos.y === -1) {
+                        blockType = 'dirt';
+                    }
+                    
+                    if (!getBlock(newPos.x, newPos.y, newPos.z)) {
+                        addBlock(newPos.x, newPos.y, newPos.z, blockType);
+                        saveWorld();
+                    }
+                }
+            }
+        }
+        
+        function removeBlock(x, y, z) {
+            const key = `${x},${y},${z}`;
+            if (world[key]) {
+                scene.remove(world[key].mesh);
+                delete world[key];
+                saveWorld();
+            }
+        }
+        
+        function getBlock(x, y, z) {
+            const key = `${x},${y},${z}`;
+            return world[key];
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function updatePlayer(delta) {
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            direction.y = 0;
+            direction.normalize();
+            
+            const sideDirection = new THREE.Vector3();
+            sideDirection.crossVectors(new THREE.Vector3(0, 1, 0), direction);
+            
+            const forwardMovement = (Number(player.moveForward) - Number(player.moveBackward));
+            const sideMovement = (Number(player.moveRight)) - (Number(player.moveLeft));
+            
+            player.velocity.x = (direction.x * forwardMovement + sideDirection.x * sideMovement) * player.speed;
+            player.velocity.z = (direction.z * forwardMovement + sideDirection.z * sideMovement) * player.speed;
+            
+            player.velocity.y -= 20 * delta;
+            if (player.velocity.y < -20) player.velocity.y = -20;
+            
+            const deltaX = player.velocity.x * delta;
+            const deltaY = player.velocity.y * delta;
+            const deltaZ = player.velocity.z * delta;
+            
+            const newPos = player.position.clone();
+            newPos.x += deltaX;
+            
+            if (!checkCollision(newPos)) {
+                player.position.x = newPos.x;
+            } else {
+                player.velocity.x = 0;
+            }
+            
+            newPos.copy(player.position);
+            newPos.y += deltaY;
+            
+            if (!checkCollision(newPos)) {
+                player.position.y = newPos.y;
+            } else {
+                if (deltaY < 0) player.canJump = true;
+                player.velocity.y = 0;
+            }
+            
+            newPos.copy(player.position);
+            newPos.z += deltaZ;
+            
+            if (!checkCollision(newPos)) {
+                player.position.z = newPos.z;
+            } else {
+                player.velocity.z = 0;
+            }
+            
+            if (controls.isLocked) {
+                controls.getObject().position.copy(player.position);
+                controls.getObject().position.y += player.height;
+            }
+        }
+        
+        function checkCollision(position) {
+            const radius = player.radius;
+            const height = player.height;
+            
+            const checkY = position.y;
+            
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
+                const checkX = position.x + Math.cos(angle) * radius;
+                const checkZ = position.z + Math.sin(angle) * radius;
+                
+                const blockX = Math.floor(checkX);
+                const blockY = Math.floor(checkY);
+                const blockZ = Math.floor(checkZ);
+                
+                if (getBlock(blockX, blockY, blockZ)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        function checkLookingAtBlock() {
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(Object.values(world).map(b => b.mesh));
+            
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                
+                if (intersect.distance > MAX_BUILD_DISTANCE) {
+                    if (highlightedBlock) {
+                        resetBlockHighlight(highlightedBlock);
+                        highlightedBlock = null;
+                    }
+                    return;
+                }
+                
+                const blockPos = intersect.object.position.clone();
+                blockPos.x = Math.floor(blockPos.x - BLOCK_SIZE/2);
+                blockPos.y = Math.floor(blockPos.y - BLOCK_SIZE/2);
+                blockPos.z = Math.floor(blockPos.z - BLOCK_SIZE/2);
+                
+                const block = getBlock(blockPos.x, blockPos.y, blockPos.z);
+                highlightBlock(block);
+            } else {
+                if (highlightedBlock) {
+                    resetBlockHighlight(highlightedBlock);
+                    highlightedBlock = null;
+                }
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            updatePlayer(delta);
+            checkLookingAtBlock();
+            updateHighlight();
+            
+            renderer.render(scene, camera);
+        }
+        
+        init();
+    </script>
+</body>
+</html>

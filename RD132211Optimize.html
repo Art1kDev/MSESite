@@ -1,49 +1,35 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>RD132211</title>
+    <title>Improved Shadow Minecraft</title>
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #000;
-            font-family: Arial, sans-serif;
-        }
-        canvas { 
-            display: block; 
-        }
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+        canvas { display: block; }
         #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 24px;
-            height: 24px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            opacity: 0.5;
+            position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
+            transform: translate(-50%, -50%); pointer-events: none; opacity: 0.5;
         }
         #crosshair::before, #crosshair::after {
-            content: '';
-            position: absolute;
-            background-color: white;
+            content: ''; position: absolute; background-color: white;
         }
         #crosshair::before {
-            width: 2px;
-            height: 100%;
-            left: 50%;
-            transform: translateX(-50%);
+            width: 2px; height: 100%; left: 50%; transform: translateX(-50%);
         }
         #crosshair::after {
-            width: 100%;
-            height: 2px;
-            top: 50%;
-            transform: translateY(-50%);
+            width: 100%; height: 2px; top: 50%; transform: translateY(-50%);
         }
+        #exitButton {
+            position: absolute; top: 10px; right: 10px; color: white;
+            background: rgba(0,0,0,0.5); border: 1px solid white;
+            padding: 5px 10px; cursor: pointer; display: none;
+        }
+        #exitButton:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
     <div id="crosshair"></div>
+    <div id="exitButton">Exit</div>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/PointerLockControls.js"></script>
     <script>
@@ -51,6 +37,8 @@
         const WORLD_DEPTH = 64;
         const BLOCK_SIZE = 1;
         const MAX_BUILD_DISTANCE = 5;
+        const SHADOW_DARKNESS = 0.44;
+        const SHADOW_CHECK_RADIUS = 15; // Радиус проверки блоков сверху
         
         const WORLD_POSITION = { x: 0, y: 0, z: 0 };
         const SPAWN_POINT = { x: 0, y: 3, z: 0 };
@@ -62,6 +50,7 @@
         let stoneTexture, dirtTexture, grassTexture;
         let highlightedBlock = null;
         let highlightStartTime = 0;
+        const HIGHLIGHT_DURATION = 1.0;
 
         let player = {
             position: new THREE.Vector3(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z),
@@ -71,7 +60,7 @@
             moveLeft: false,
             moveRight: false,
             canJump: false,
-            height: 1.8,
+            height: 2.0,
             radius: 0.3,
             speed: 4.0,
             jumpHeight: 8
@@ -81,7 +70,7 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x7fccff);
             
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
             camera.position.copy(player.position);
             camera.position.y += player.height;
             
@@ -90,12 +79,16 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
             
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
             
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(100, 100, 50);
             scene.add(directionalLight);
+            
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444422, 0.3);
+            hemisphereLight.position.set(0, 50, 0);
+            scene.add(hemisphereLight);
             
             const textureLoader = new THREE.TextureLoader();
             stoneTexture = textureLoader.load('https://i.postimg.cc/Dw9KdZ9N/5382343738950545341.jpg');
@@ -113,11 +106,38 @@
             loadWorld();
             setupControls();
             
-            setTimeout(() => {
-                controls.lock();
-            }, 100);
+            // Запускаем проверку теней каждую секунду
+            setInterval(updateShadowsForAllBlocks, 1000);
             
+            setTimeout(() => { controls.lock(); }, 100);
             animate();
+        }
+        
+        function hasBlockAbove(x, y, z) {
+            // Проверяем блоки в радиусе 15 над текущим блоком
+            for (let dy = 1; dy <= SHADOW_CHECK_RADIUS; dy++) {
+                const key = `${x},${y+dy},${z}`;
+                if (world[key]) return true;
+            }
+            return false;
+        }
+        
+        function updateShadowsForBlock(x, y, z) {
+            const currentBlockKey = `${x},${y},${z}`;
+            const currentBlock = world[currentBlockKey];
+            
+            if (currentBlock) {
+                const shouldBeShadowed = hasBlockAbove(x, y, z);
+                applyShadow(currentBlock, shouldBeShadowed);
+            }
+        }
+        
+        function updateShadowsForAllBlocks() {
+            // Обновляем тени для всех блоков в мире
+            for (const key in world) {
+                const [x, y, z] = key.split(',').map(Number);
+                updateShadowsForBlock(x, y, z);
+            }
         }
         
         function generateLayeredWorld() {
@@ -172,7 +192,45 @@
             );
             
             scene.add(cube);
-            world[key] = { mesh: cube, type: type, originalMaterials: Array.isArray(material) ? material.map(m => m.clone()) : material.clone() };
+            
+            const originalMaterials = Array.isArray(material) 
+                ? material.map(m => m.clone()) 
+                : material.clone();
+            
+            world[key] = { 
+                mesh: cube, 
+                type: type, 
+                originalMaterials: originalMaterials,
+                shadowed: false
+            };
+            
+            updateShadowsForBlock(x, y, z);
+        }
+        
+        function applyShadow(block, shadow) {
+            if (block.shadowed === shadow) return;
+            
+            block.shadowed = shadow;
+            
+            if (Array.isArray(block.mesh.material)) {
+                block.mesh.material.forEach((mat, i) => {
+                    if (shadow) {
+                        mat.color.r = block.originalMaterials[i].color.r * SHADOW_DARKNESS;
+                        mat.color.g = block.originalMaterials[i].color.g * SHADOW_DARKNESS;
+                        mat.color.b = block.originalMaterials[i].color.b * SHADOW_DARKNESS;
+                    } else {
+                        mat.color.copy(block.originalMaterials[i].color);
+                    }
+                });
+            } else {
+                if (shadow) {
+                    block.mesh.material.color.r = block.originalMaterials.color.r * SHADOW_DARKNESS;
+                    block.mesh.material.color.g = block.originalMaterials.color.g * SHADOW_DARKNESS;
+                    block.mesh.material.color.b = block.originalMaterials.color.b * SHADOW_DARKNESS;
+                } else {
+                    block.mesh.material.color.copy(block.originalMaterials.color);
+                }
+            }
         }
         
         function saveWorld() {
@@ -203,6 +261,14 @@
             
             highlightedBlock = block;
             highlightStartTime = performance.now();
+            
+            if (Array.isArray(block.mesh.material)) {
+                block.mesh.material.forEach(mat => {
+                    mat.color.set(0xffffff);
+                });
+            } else {
+                block.mesh.material.color.set(0xffffff);
+            }
         }
         
         function resetBlockHighlight(block) {
@@ -210,10 +276,22 @@
             
             if (Array.isArray(block.mesh.material)) {
                 block.mesh.material.forEach((mat, i) => {
-                    mat.color.copy(block.originalMaterials[i].color);
+                    if (block.shadowed) {
+                        mat.color.r = block.originalMaterials[i].color.r * SHADOW_DARKNESS;
+                        mat.color.g = block.originalMaterials[i].color.g * SHADOW_DARKNESS;
+                        mat.color.b = block.originalMaterials[i].color.b * SHADOW_DARKNESS;
+                    } else {
+                        mat.color.copy(block.originalMaterials[i].color);
+                    }
                 });
             } else {
-                block.mesh.material.color.copy(block.originalMaterials.color);
+                if (block.shadowed) {
+                    block.mesh.material.color.r = block.originalMaterials.color.r * SHADOW_DARKNESS;
+                    block.mesh.material.color.g = block.originalMaterials.color.g * SHADOW_DARKNESS;
+                    block.mesh.material.color.b = block.originalMaterials.color.b * SHADOW_DARKNESS;
+                } else {
+                    block.mesh.material.color.copy(block.originalMaterials.color);
+                }
             }
         }
         
@@ -221,22 +299,24 @@
             if (!highlightedBlock) return;
             
             const elapsed = (performance.now() - highlightStartTime) / 1000;
-            const progress = (elapsed % 1.0) / 1.0;
-            const whiteIntensity = Math.sin(progress * Math.PI);
-            
-            if (Array.isArray(highlightedBlock.mesh.material)) {
-                highlightedBlock.mesh.material.forEach((mat, i) => {
-                    const originalColor = highlightedBlock.originalMaterials[i].color;
-                    mat.color.lerpColors(originalColor, new THREE.Color(0xffffff), whiteIntensity);
-                });
-            } else {
-                const originalColor = highlightedBlock.originalMaterials.color;
-                highlightedBlock.mesh.material.color.lerpColors(originalColor, new THREE.Color(0xffffff), whiteIntensity);
+            if (elapsed >= HIGHLIGHT_DURATION) {
+                resetBlockHighlight(highlightedBlock);
+                highlightedBlock = null;
             }
         }
         
         function setupControls() {
             controls = new THREE.PointerLockControls(camera, document.body);
+            
+            const exitButton = document.getElementById('exitButton');
+            
+            controls.addEventListener('lock', () => {
+                exitButton.style.display = 'none';
+            });
+            
+            controls.addEventListener('unlock', () => {
+                exitButton.style.display = 'block';
+            });
             
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
@@ -244,8 +324,15 @@
             window.addEventListener('resize', onWindowResize);
         }
         
+        function getRandomSpawnPosition() {
+            const x = Math.floor(Math.random() * WORLD_WIDTH - WORLD_WIDTH/2);
+            const z = Math.floor(Math.random() * WORLD_DEPTH - WORLD_DEPTH/2);
+            return { x, y: 5, z };
+        }
+        
         function respawnPlayer() {
-            player.position.set(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z);
+            const spawnPoint = getRandomSpawnPosition();
+            player.position.set(spawnPoint.x, spawnPoint.y, spawnPoint.z);
             player.velocity.set(0, 0, 0);
             player.canJump = false;
             
@@ -259,10 +346,20 @@
             switch (event.code) {
                 case 'KeyW': player.moveForward = true; break;
                 case 'KeyS': player.moveBackward = true; break;
-                case 'KeyA': player.moveRight = true; break;
-                case 'KeyD': player.moveLeft = true; break;
-                case 'Space': if (player.canJump) player.velocity.y = player.jumpHeight; player.canJump = false; break;
-                case 'KeyR': respawnPlayer(); break;
+                case 'KeyA': player.moveLeft = true; break;
+                case 'KeyD': player.moveRight = true; break;
+                case 'Space': 
+                    if (player.canJump) {
+                        player.velocity.y = player.jumpHeight;
+                        player.canJump = false;
+                    }
+                    break;
+                case 'KeyR': 
+                    respawnPlayer();
+                    if (!respawnInterval) {
+                        respawnInterval = setInterval(respawnPlayer, 100);
+                    }
+                    break;
                 case 'Escape': 
                     if (controls.isLocked) {
                         controls.unlock();
@@ -275,8 +372,14 @@
             switch (event.code) {
                 case 'KeyW': player.moveForward = false; break;
                 case 'KeyS': player.moveBackward = false; break;
-                case 'KeyA': player.moveRight = false; break;
-                case 'KeyD': player.moveLeft = false; break;
+                case 'KeyA': player.moveLeft = false; break;
+                case 'KeyD': player.moveRight = false; break;
+                case 'KeyR': 
+                    if (respawnInterval) {
+                        clearInterval(respawnInterval);
+                        respawnInterval = null;
+                    }
+                    break;
             }
         }
         
@@ -333,6 +436,10 @@
             if (world[key]) {
                 scene.remove(world[key].mesh);
                 delete world[key];
+                
+                // Обновляем тени для соседних блоков
+                updateShadowsForBlock(x, y+1, z);
+                updateShadowsForBlock(x, y-1, z);
                 saveWorld();
             }
         }
@@ -358,7 +465,7 @@
             sideDirection.crossVectors(new THREE.Vector3(0, 1, 0), direction);
             
             const forwardMovement = (Number(player.moveForward) - Number(player.moveBackward));
-            const sideMovement = (Number(player.moveRight)) - (Number(player.moveLeft));
+            const sideMovement = (Number(player.moveLeft)) - (Number(player.moveRight));
             
             player.velocity.x = (direction.x * forwardMovement + sideDirection.x * sideMovement) * player.speed;
             player.velocity.z = (direction.z * forwardMovement + sideDirection.z * sideMovement) * player.speed;
@@ -408,18 +515,20 @@
             const radius = player.radius;
             const height = player.height;
             
-            const checkY = position.y;
-            
-            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
-                const checkX = position.x + Math.cos(angle) * radius;
-                const checkZ = position.z + Math.sin(angle) * radius;
+            for (let yCheck = 0; yCheck <= height; yCheck += height) {
+                const checkY = position.y + yCheck;
                 
-                const blockX = Math.floor(checkX);
-                const blockY = Math.floor(checkY);
-                const blockZ = Math.floor(checkZ);
-                
-                if (getBlock(blockX, blockY, blockZ)) {
-                    return true;
+                for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
+                    const checkX = position.x + Math.cos(angle) * radius;
+                    const checkZ = position.z + Math.sin(angle) * radius;
+                    
+                    const blockX = Math.floor(checkX);
+                    const blockY = Math.floor(checkY);
+                    const blockZ = Math.floor(checkZ);
+                    
+                    if (getBlock(blockX, blockY, blockZ)) {
+                        return true;
+                    }
                 }
             }
             

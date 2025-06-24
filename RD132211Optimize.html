@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Improved Shadow Minecraft</title>
+    <title>Improved Shadow Minecraft with Day-Night Cycle</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
         canvas { display: block; }
@@ -38,10 +38,15 @@
         const BLOCK_SIZE = 1;
         const MAX_BUILD_DISTANCE = 5;
         const SHADOW_DARKNESS = 0.44;
-        const SHADOW_CHECK_RADIUS = 15; // Радиус проверки блоков сверху
+        const SHADOW_CHECK_RADIUS = 15;
         
         const WORLD_POSITION = { x: 0, y: 0, z: 0 };
         const SPAWN_POINT = { x: 0, y: 3, z: 0 };
+        
+        const DAY_DURATION = 240;
+        const NIGHT_START = 0.6;
+        const SUNRISE_DURATION = 30;
+        const TIME_STORAGE_KEY = 'minecraftWorldTime';
         
         let scene, camera, renderer, controls;
         let world = {};
@@ -51,6 +56,14 @@
         let highlightedBlock = null;
         let highlightStartTime = 0;
         const HIGHLIGHT_DURATION = 1.0;
+
+        let dayNightCycle = {
+            time: 0,
+            isDay: true,
+            sunLight: null,
+            ambientLight: null,
+            hemisphereLight: null
+        };
 
         let player = {
             position: new THREE.Vector3(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z),
@@ -79,16 +92,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
             
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(100, 100, 50);
-            scene.add(directionalLight);
-            
-            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444422, 0.3);
-            hemisphereLight.position.set(0, 50, 0);
-            scene.add(hemisphereLight);
+            setupLights();
             
             const textureLoader = new THREE.TextureLoader();
             stoneTexture = textureLoader.load('https://i.postimg.cc/Dw9KdZ9N/5382343738950545341.jpg');
@@ -104,17 +108,194 @@
             grassTexture.repeat.set(1, 1);
             
             loadWorld();
+            loadTime();
             setupControls();
             
-            // Запускаем проверку теней каждую секунду
             setInterval(updateShadowsForAllBlocks, 1000);
             
             setTimeout(() => { controls.lock(); }, 100);
             animate();
         }
         
+        function setupLights() {
+            if (dayNightCycle.sunLight) scene.remove(dayNightCycle.sunLight);
+            if (dayNightCycle.ambientLight) scene.remove(dayNightCycle.ambientLight);
+            if (dayNightCycle.hemisphereLight) scene.remove(dayNightCycle.hemisphereLight);
+            
+            dayNightCycle.sunLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dayNightCycle.sunLight.position.set(100, 100, 50);
+            dayNightCycle.sunLight.castShadow = true;
+            scene.add(dayNightCycle.sunLight);
+            
+            dayNightCycle.ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(dayNightCycle.ambientLight);
+            
+            dayNightCycle.hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444422, 0.3);
+            dayNightCycle.hemisphereLight.position.set(0, 50, 0);
+            scene.add(dayNightCycle.hemisphereLight);
+        }
+        
+        function updateDayNightCycle(delta) {
+            dayNightCycle.time += delta;
+            
+            if (dayNightCycle.time > DAY_DURATION) {
+                dayNightCycle.time = 0;
+            }
+            
+            const dayPhase = dayNightCycle.time / DAY_DURATION;
+            const isDayTime = dayPhase < NIGHT_START;
+            
+            if (dayNightCycle.isDay !== isDayTime) {
+                dayNightCycle.isDay = isDayTime;
+            }
+            
+            updateLightIntensities(dayPhase);
+            updateSunPosition(dayPhase);
+        }
+        
+        function updateLightIntensities(dayPhase) {
+            let sunIntensity, ambientIntensity, hemisphereIntensity;
+            
+            if (dayPhase < NIGHT_START) {
+                const dayProgress = dayPhase / NIGHT_START;
+                sunIntensity = 0.6 + 0.1 * Math.sin(dayProgress * Math.PI);
+                ambientIntensity = 0.3;
+                hemisphereIntensity = 0.3;
+            } else {
+                const nightProgress = (dayPhase - NIGHT_START) / (1 - NIGHT_START);
+                sunIntensity = 0.05;
+                ambientIntensity = 0.05 + 0.05 * Math.sin(nightProgress * Math.PI);
+                hemisphereIntensity = 0.05;
+            }
+            
+            const transitionZone = SUNRISE_DURATION / DAY_DURATION;
+            const transitionStart = NIGHT_START - transitionZone/2;
+            const transitionEnd = NIGHT_START + transitionZone/2;
+            
+            if (dayPhase > transitionStart && dayPhase < transitionEnd) {
+                const transitionProgress = (dayPhase - transitionStart) / transitionZone;
+                const transitionFactor = 0.5 - 0.5 * Math.cos(transitionProgress * Math.PI * 2);
+                
+                if (dayPhase < NIGHT_START) {
+                    sunIntensity = 0.6 + (0.05 - 0.6) * transitionFactor;
+                    ambientIntensity = 0.3 + (0.05 - 0.3) * transitionFactor;
+                    hemisphereIntensity = 0.3 + (0.05 - 0.3) * transitionFactor;
+                } else {
+                    sunIntensity = 0.05 + (0.6 - 0.05) * transitionFactor;
+                    ambientIntensity = 0.05 + (0.3 - 0.05) * transitionFactor;
+                    hemisphereIntensity = 0.05 + (0.3 - 0.05) * transitionFactor;
+                }
+            }
+            
+            dayNightCycle.sunLight.intensity = sunIntensity;
+            dayNightCycle.ambientLight.intensity = ambientIntensity;
+            dayNightCycle.hemisphereLight.intensity = hemisphereIntensity;
+            
+            const effectiveShadowDarkness = SHADOW_DARKNESS * (0.5 + sunIntensity * 0.5);
+            updateShadowDarknessForAllBlocks(effectiveShadowDarkness);
+        }
+        
+        function updateSunPosition(dayPhase) {
+            const sunAngle = dayPhase * Math.PI * 2;
+            const sunDistance = 200;
+            
+            dayNightCycle.sunLight.position.x = Math.cos(sunAngle) * sunDistance;
+            dayNightCycle.sunLight.position.y = Math.max(0, Math.sin(sunAngle) * sunDistance);
+            dayNightCycle.sunLight.position.z = Math.sin(sunAngle) * sunDistance * 0.5;
+            
+            dayNightCycle.sunLight.shadow.camera.left = -100;
+            dayNightCycle.sunLight.shadow.camera.right = 100;
+            dayNightCycle.sunLight.shadow.camera.top = 100;
+            dayNightCycle.sunLight.shadow.camera.bottom = -100;
+            dayNightCycle.sunLight.shadow.camera.near = 0.5;
+            dayNightCycle.sunLight.shadow.camera.far = 500;
+            dayNightCycle.sunLight.shadow.camera.updateProjectionMatrix();
+            
+            updateSkyColor(dayPhase);
+        }
+        
+        function updateSkyColor(dayPhase) {
+            let skyColor;
+            
+            if (dayPhase < NIGHT_START) {
+                const dayProgress = dayPhase / NIGHT_START;
+                const r = 0.2 + 0.6 * Math.sin(dayProgress * Math.PI);
+                const g = 0.5 + 0.3 * Math.sin(dayProgress * Math.PI);
+                const b = 1.0;
+                skyColor = new THREE.Color(r, g, b);
+            } else {
+                const nightProgress = (dayPhase - NIGHT_START) / (1 - NIGHT_START);
+                const r = 0.05 * (0.5 + 0.5 * Math.sin(nightProgress * Math.PI * 2));
+                const g = 0.05 * (0.5 + 0.5 * Math.sin(nightProgress * Math.PI * 2));
+                const b = 0.1 + 0.1 * Math.sin(nightProgress * Math.PI);
+                skyColor = new THREE.Color(r, g, b);
+            }
+            
+            const transitionZone = SUNRISE_DURATION / DAY_DURATION;
+            const transitionStart = NIGHT_START - transitionZone/2;
+            const transitionEnd = NIGHT_START + transitionZone/2;
+            
+            if (dayPhase > transitionStart && dayPhase < transitionEnd) {
+                const transitionProgress = (dayPhase - transitionStart) / transitionZone;
+                const dayColor = new THREE.Color(0x7fccff);
+                const nightColor = new THREE.Color(0x05050a);
+                
+                if (dayPhase < NIGHT_START) {
+                    skyColor = dayColor.clone().lerp(nightColor, transitionProgress * 2);
+                } else {
+                    skyColor = nightColor.clone().lerp(dayColor, (transitionProgress - 0.5) * 2);
+                }
+            }
+            
+            scene.background = skyColor;
+        }
+        
+        function saveTime() {
+            localStorage.setItem(TIME_STORAGE_KEY, JSON.stringify({
+                time: dayNightCycle.time,
+                lastUpdate: Date.now()
+            }));
+        }
+        
+        function loadTime() {
+            const savedTime = localStorage.getItem(TIME_STORAGE_KEY);
+            if (savedTime) {
+                try {
+                    const timeData = JSON.parse(savedTime);
+                    const secondsPassed = (Date.now() - timeData.lastUpdate) / 1000;
+                    dayNightCycle.time = (timeData.time + secondsPassed) % DAY_DURATION;
+                } catch (e) {
+                    console.error("Error loading time data:", e);
+                    dayNightCycle.time = 0;
+                }
+            } else {
+                dayNightCycle.time = 0;
+            }
+            
+            updateLightIntensities(dayNightCycle.time / DAY_DURATION);
+            updateSunPosition(dayNightCycle.time / DAY_DURATION);
+        }
+        
+        function updateShadowDarknessForAllBlocks(newDarkness) {
+            for (const key in world) {
+                const block = world[key];
+                if (block.shadowed) {
+                    if (Array.isArray(block.mesh.material)) {
+                        block.mesh.material.forEach((mat, i) => {
+                            mat.color.r = block.originalMaterials[i].color.r * newDarkness;
+                            mat.color.g = block.originalMaterials[i].color.g * newDarkness;
+                            mat.color.b = block.originalMaterials[i].color.b * newDarkness;
+                        });
+                    } else {
+                        block.mesh.material.color.r = block.originalMaterials.color.r * newDarkness;
+                        block.mesh.material.color.g = block.originalMaterials.color.g * newDarkness;
+                        block.mesh.material.color.b = block.originalMaterials.color.b * newDarkness;
+                    }
+                }
+            }
+        }
+        
         function hasBlockAbove(x, y, z) {
-            // Проверяем блоки в радиусе 15 над текущим блоком
             for (let dy = 1; dy <= SHADOW_CHECK_RADIUS; dy++) {
                 const key = `${x},${y+dy},${z}`;
                 if (world[key]) return true;
@@ -133,7 +314,6 @@
         }
         
         function updateShadowsForAllBlocks() {
-            // Обновляем тени для всех блоков в мире
             for (const key in world) {
                 const [x, y, z] = key.split(',').map(Number);
                 updateShadowsForBlock(x, y, z);
@@ -212,21 +392,23 @@
             
             block.shadowed = shadow;
             
+            const shadowDarkness = SHADOW_DARKNESS * (0.5 + dayNightCycle.sunLight.intensity * 0.5);
+            
             if (Array.isArray(block.mesh.material)) {
                 block.mesh.material.forEach((mat, i) => {
                     if (shadow) {
-                        mat.color.r = block.originalMaterials[i].color.r * SHADOW_DARKNESS;
-                        mat.color.g = block.originalMaterials[i].color.g * SHADOW_DARKNESS;
-                        mat.color.b = block.originalMaterials[i].color.b * SHADOW_DARKNESS;
+                        mat.color.r = block.originalMaterials[i].color.r * shadowDarkness;
+                        mat.color.g = block.originalMaterials[i].color.g * shadowDarkness;
+                        mat.color.b = block.originalMaterials[i].color.b * shadowDarkness;
                     } else {
                         mat.color.copy(block.originalMaterials[i].color);
                     }
                 });
             } else {
                 if (shadow) {
-                    block.mesh.material.color.r = block.originalMaterials.color.r * SHADOW_DARKNESS;
-                    block.mesh.material.color.g = block.originalMaterials.color.g * SHADOW_DARKNESS;
-                    block.mesh.material.color.b = block.originalMaterials.color.b * SHADOW_DARKNESS;
+                    block.mesh.material.color.r = block.originalMaterials.color.r * shadowDarkness;
+                    block.mesh.material.color.g = block.originalMaterials.color.g * shadowDarkness;
+                    block.mesh.material.color.b = block.originalMaterials.color.b * shadowDarkness;
                 } else {
                     block.mesh.material.color.copy(block.originalMaterials.color);
                 }
@@ -239,6 +421,7 @@
                 worldData[key] = world[key].type;
             }
             localStorage.setItem('minecraftWorld', JSON.stringify(worldData));
+            saveTime();
         }
         
         function loadWorld() {
@@ -277,18 +460,20 @@
             if (Array.isArray(block.mesh.material)) {
                 block.mesh.material.forEach((mat, i) => {
                     if (block.shadowed) {
-                        mat.color.r = block.originalMaterials[i].color.r * SHADOW_DARKNESS;
-                        mat.color.g = block.originalMaterials[i].color.g * SHADOW_DARKNESS;
-                        mat.color.b = block.originalMaterials[i].color.b * SHADOW_DARKNESS;
+                        const shadowDarkness = SHADOW_DARKNESS * (0.5 + dayNightCycle.sunLight.intensity * 0.5);
+                        mat.color.r = block.originalMaterials[i].color.r * shadowDarkness;
+                        mat.color.g = block.originalMaterials[i].color.g * shadowDarkness;
+                        mat.color.b = block.originalMaterials[i].color.b * shadowDarkness;
                     } else {
                         mat.color.copy(block.originalMaterials[i].color);
                     }
                 });
             } else {
                 if (block.shadowed) {
-                    block.mesh.material.color.r = block.originalMaterials.color.r * SHADOW_DARKNESS;
-                    block.mesh.material.color.g = block.originalMaterials.color.g * SHADOW_DARKNESS;
-                    block.mesh.material.color.b = block.originalMaterials.color.b * SHADOW_DARKNESS;
+                    const shadowDarkness = SHADOW_DARKNESS * (0.5 + dayNightCycle.sunLight.intensity * 0.5);
+                    block.mesh.material.color.r = block.originalMaterials.color.r * shadowDarkness;
+                    block.mesh.material.color.g = block.originalMaterials.color.g * shadowDarkness;
+                    block.mesh.material.color.b = block.originalMaterials.color.b * shadowDarkness;
                 } else {
                     block.mesh.material.color.copy(block.originalMaterials.color);
                 }
@@ -322,6 +507,12 @@
             document.addEventListener('keyup', onKeyUp);
             document.addEventListener('mousedown', onMouseDown);
             window.addEventListener('resize', onWindowResize);
+            
+            exitButton.addEventListener('click', () => {
+                if (!controls.isLocked) {
+                    controls.lock();
+                }
+            });
         }
         
         function getRandomSpawnPosition() {
@@ -356,9 +547,6 @@
                     break;
                 case 'KeyR': 
                     respawnPlayer();
-                    if (!respawnInterval) {
-                        respawnInterval = setInterval(respawnPlayer, 100);
-                    }
                     break;
                 case 'Escape': 
                     if (controls.isLocked) {
@@ -374,12 +562,6 @@
                 case 'KeyS': player.moveBackward = false; break;
                 case 'KeyA': player.moveLeft = false; break;
                 case 'KeyD': player.moveRight = false; break;
-                case 'KeyR': 
-                    if (respawnInterval) {
-                        clearInterval(respawnInterval);
-                        respawnInterval = null;
-                    }
-                    break;
             }
         }
         
@@ -437,7 +619,6 @@
                 scene.remove(world[key].mesh);
                 delete world[key];
                 
-                // Обновляем тени для соседних блоков
                 updateShadowsForBlock(x, y+1, z);
                 updateShadowsForBlock(x, y-1, z);
                 saveWorld();
@@ -571,11 +752,14 @@
             const delta = clock.getDelta();
             
             updatePlayer(delta);
+            updateDayNightCycle(delta);
             checkLookingAtBlock();
             updateHighlight();
             
             renderer.render(scene, camera);
         }
+        
+        window.addEventListener('beforeunload', saveTime);
         
         init();
     </script>

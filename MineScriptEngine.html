@@ -5,74 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Mine Script Engine</title>
     <style>
-        @font-face {
-            font-family: 'Minecraft';
-            src: url('https://assets.codepen.io/1213385/MinecraftRegular-Bmg3.otf') format('opentype');
-        }
-        
         body {
             margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            background-image: url('https://i.postimg.cc/7Y10YXJb/56-20250621141107.png');
+            padding: 0;
+            height: 100vh;
+            background-image: url('https://i.postimg.cc/gkJk43pf/2025-07-01-11-59-05.png');
             background-size: 128px 128px;
-            font-family: 'Minecraft', sans-serif;
+            background-repeat: repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial Bold', Arial, sans-serif;
+            font-weight: bold;
             color: white;
             text-align: center;
         }
-        
+
         .logo {
+            margin-bottom: 30px;
             max-width: 300px;
-            margin: 20px auto;
+            transform: translateY(-20%);
         }
-        
-        h1 {
-            color: #FFAA00;
-            text-shadow: 2px 2px 0 #AA0000;
-            margin: 20px 0;
-        }
-        
-        p {
-            margin: 15px 0;
-            line-height: 1.5;
-        }
-        
+
         .back-btn {
-            position: fixed;
-            top: 10px;
-            left: 10px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
             background: none;
             border: none;
             color: white;
-            font-family: 'Minecraft';
+            font-family: 'Arial Bold', Arial, sans-serif;
+            font-weight: bold;
             font-size: 16px;
             cursor: pointer;
-            text-shadow: 2px 2px 0 #000;
         }
-        
+
         .back-btn:hover {
-            color: #FFFF55;
+            color: #00a2ff;
+        }
+
+        .description {
+            max-width: 600px;
+            margin: 0 auto 15px;
+            line-height: 1.5;
+        }
+
+        .version-options {
+            margin-bottom: 20px;
+        }
+
+        .version-option {
+            margin: 8px 0;
+            color: #00a2ff;
+        }
+
+        .tech-info {
+            margin: 15px 0;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <button class="back-btn" onclick="window.location.href='index.html'">← Back</button>
+    <button class="back-btn" onclick="window.location.href='Tesa.html'">← Back</button>
     
-    <img src="https://i.postimg.cc/8P1kVbR1/59-20250621141642.png" alt="MSE Logo" class="logo">
+    <img src="https://i.postimg.cc/XJWVR715/2025-07-01-12-11-20-no-bg-preview-carve-photos.png" alt="MSE Logo" class="logo">
 
-    <h1>MINE SCRIPT ENGINE</h1>
+    <div class="description">
+        <p>MSE (Mine Script Engine) is a JavaScript port of classic Minecraft 4K game.</p>
+        <p>The original Java code has been converted to run in modern browsers.</p>
+    </div>
     
-    <p>MSE (Mine Script Engine) is a JavaScript port</p>
-    <p>of classic Minecraft 4K game.</p>
+    <div class="version-options">
+        <p>Choose between:</p>
+        <p class="version-option">- 4K-OLD (converted old version)</p>
+        <p class="version-option">- 4K-NEW (new version made by me)</p>
+        <p class="version-option">and others...</p>
+    </div>
     
-    <p>The original Java code has been converted</p>
-    <p>to run in modern browsers.</p>
-    
-    <p>Choose between:</p>
-    <p>- 4K-OLD (conversion of the old version)</p>
-    <p>- 4K-NEW (optimized version)</p>
-    
-    <p>Java is not required!</p>
-    <p>It works in any browser.</p>
+    <div class="tech-info">
+        <p>Java is not required! Works in any modern browser.</p>
+        <p>Requires WebGL support for optimal performance.</p>
+    </div>
+
+    <script>
+        // Simple WebGL detection
+        function detectWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!window.WebGLRenderingContext && 
+                      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+            } catch(e) {
+                return false;
+            }
+        }
+
+        // Check WebGL support on page load
+        window.onload = function() {
+            if (!detectWebGL()) {
+                const techInfo = document.querySelector('.tech-info');
+                techInfo.innerHTML += '<p style="color:#FF5555">Warning: WebGL not supported. Performance may be affected.</p>';
+            }
+        };
+    </script>
 </body>
 </html>

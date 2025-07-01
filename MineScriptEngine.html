@@ -89,7 +89,6 @@
     </div>
 
     <script>
-    
         function detectWebGL() {
             try {
                 const canvas = document.createElement('canvas');
@@ -100,7 +99,6 @@
             }
         }
 
-        
         window.onload = function() {
             if (!detectWebGL()) {
                 const techInfo = document.querySelector('.tech-info');

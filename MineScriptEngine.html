@@ -41,6 +41,10 @@
             cursor: pointer;
         }
 
+        .back-btn:hover {
+            color: #00a2ff;
+        }
+
         .description {
             max-width: 600px;
             margin: 0 auto 15px;
@@ -63,7 +67,7 @@
     </style>
 </head>
 <body>
-    <button class="back-btn" onclick="window.location.href='Index.html'">← Back</button>
+    <button class="back-btn" onclick="window.location.href='Tesa.html'">← Back</button>
     
     <img src="https://i.postimg.cc/XJWVR715/2025-07-01-12-11-20-no-bg-preview-carve-photos.png" alt="MSE Logo" class="logo">
 
@@ -85,6 +89,7 @@
     </div>
 
     <script>
+        // Simple WebGL detection
         function detectWebGL() {
             try {
                 const canvas = document.createElement('canvas');
@@ -95,6 +100,7 @@
             }
         }
 
+        // Check WebGL support on page load
         window.onload = function() {
             if (!detectWebGL()) {
                 const techInfo = document.querySelector('.tech-info');

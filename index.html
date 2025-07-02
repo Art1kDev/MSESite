@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MineCraft</title>
+    <link rel="icon" href="https://i.postimg.cc/YCt66J2j/Legacy-grass-no-bg-preview-carve-photos.png" type="image/png">
     <style>
         body {
             margin: 0;
@@ -19,6 +20,7 @@
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
             color: white;
+            overflow: hidden;
         }
 
         .logo {
@@ -63,9 +65,41 @@
         .mine-script-engine:hover {
             color: #00a2ff;
         }
+
+        .version-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 14px;
+            color: white;
+            font-family: 'Arial Bold', Arial, sans-serif;
+            font-weight: bold;
+        }
+        .version-info span {
+            color: #00a2ff;
+        }
+
+        .achievement {
+            position: fixed;
+            left: -320px;
+            bottom: 20px;
+            z-index: 100;
+            transition: all 0.5s ease-in-out;
+        }
+        .achievement img {
+            width: 300px;
+            height: auto;
+        }
+        .achievement.show {
+            left: 20px;
+        }
     </style>
 </head>
 <body>
+    <div class="version-info">Version: <span id="versionText">1.2.6</span></div>
+    <div class="achievement">
+        <img src="https://i.postimg.cc/nLNqfq0y/74-20250702110547.png" alt="Achievement">
+    </div>
     <img src="https://i.postimg.cc/XJWVR715/2025-07-01-12-11-20-no-bg-preview-carve-photos.png" alt="Logo" class="logo">
 
     <div class="menu-container">
@@ -81,6 +115,20 @@
     <a href="MineScriptEngine.html" class="mine-script-engine">Mine Script Engine</a>
 
     <script>
+        const firstLaunch = localStorage.getItem('firstLaunch') === null;
+        if (firstLaunch) {
+            localStorage.setItem('firstLaunch', 'false');
+            const achievement = document.querySelector('.achievement');
+            
+            setTimeout(() => {
+                achievement.classList.add('show');
+                
+                setTimeout(() => {
+                    achievement.classList.remove('show');
+                }, 3000);
+            }, 1000);
+        }
+
         function launchVersion() {
             const selectedVersion = document.getElementById('versionSelect').value;
             window.location.href = selectedVersion;

@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MineCraft</title>
-    <link rel="icon" href="https://i.postimg.cc/YCt66J2j/Legacy-grass-no-bg-preview-carve-photos.png " type="image/png">
+    <link rel="icon" href="https://i.postimg.cc/YCt66J2j/Legacy-grass-no-bg-preview-carve-photos.png" type="image/png">
     <style>
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
-            background-image: url('https://i.postimg.cc/gkJk43pf/2025-07-01-11-59-05.png ');
+            background-image: url('https://i.postimg.cc/gkJk43pf/2025-07-01-11-59-05.png');
             background-size: 128px 128px;
             background-repeat: repeat;
             display: flex;
@@ -22,23 +22,27 @@
             color: white;
             overflow: hidden;
         }
+
         .logo {
             margin-bottom: 50px;
             max-width: 80%;
             transform: translateY(-20%);
         }
+
         .menu-container {
             display: flex;
             align-items: center;
             gap: 10px;
             margin-bottom: 20px;
         }
+
         .version-select {
             padding: 5px;
             font-size: 16px;
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
         }
+
         .launch-text {
             color: #00a2ff;
             font-size: 16px;
@@ -47,6 +51,7 @@
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
         }
+
         .mine-script-engine {
             position: absolute;
             bottom: 20px;
@@ -60,6 +65,7 @@
         .mine-script-engine:hover {
             color: #00a2ff;
         }
+
         .version-info {
             position: absolute;
             top: 20px;
@@ -72,6 +78,7 @@
         .version-info span {
             color: #00a2ff;
         }
+
         .achievement {
             position: fixed;
             left: -320px;
@@ -91,9 +98,10 @@
 <body>
     <div class="version-info">Version: <span id="versionText">1.2.6</span></div>
     <div class="achievement">
-        <img src="https://i.postimg.cc/nLNqfq0y/74-20250702110547.png " alt="Achievement">
+        <img src="https://i.postimg.cc/nLNqfq0y/74-20250702110547.png" alt="Achievement">
     </div>
-    <img src="https://i.postimg.cc/XJWVR715/2025-07-01-12-11-20-no-bg-preview-carve-photos.png " alt="Logo" class="logo">
+    <img src="https://i.postimg.cc/XJWVR715/2025-07-01-12-11-20-no-bg-preview-carve-photos.png" alt="Logo" class="logo">
+
     <div class="menu-container">
         <span class="launch-text" onclick="launchVersion()">Launch</span>
         <select class="version-select" id="versionSelect">
@@ -101,17 +109,20 @@
             <option value="Minecraft4k-0144.html">4K-NEW (Optimized)</option>
             <option value="RD132211.html">RD132211</option>
             <option value="RD132211Optimize.html">RD132211 (Optimized)</option>
-            <option value="RD132211-Mini.html">RD132211-Mini</option> <!-- Новая строка -->
         </select>
     </div>
+
     <a href="MineScriptEngine.html" class="mine-script-engine">Mine Script Engine</a>
+
     <script>
         const firstLaunch = localStorage.getItem('firstLaunch') === null;
         if (firstLaunch) {
             localStorage.setItem('firstLaunch', 'false');
             const achievement = document.querySelector('.achievement');
+            
             setTimeout(() => {
                 achievement.classList.add('show');
+                
                 setTimeout(() => {
                     achievement.classList.remove('show');
                 }, 3000);

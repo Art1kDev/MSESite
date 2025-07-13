@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {
-            background: url('https://i.postimg.cc/kg78cjJ8/56-20250621102335.png');
-            background-size: 128px 128px;
+            background: url('BackGround.png');
+            background-size: cover;
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 0;
@@ -218,7 +218,7 @@
 <body>
     <h1>Minecraft 4K</h1>
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="856" height="480"></canvas>
+        <canvas id="gameCanvas" width="854" height="489"></canvas>
         <div id="crosshair"></div>
         <div id="mobileControls">
             <div id="movementPad">
@@ -674,36 +674,36 @@
             if (e.button === 2) M[1] = 0;
         }
         
-function handleMouseMove(e) {
-    if (document.pointerLockElement === canvas || e.buttons > 0) {
-        const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
-        const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
+        function handleMouseMove(e) {
+            if (document.pointerLockElement === canvas || e.buttons > 0) {
+                const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
+                const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
+                
+                rotationX += movementX * 0.002;
+                rotationY += movementY * 0.002;
+                
+                rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
+            }
+        }
         
-        rotationX += movementX * 0.002;  // Изменено с -= на +
-        rotationY += movementY * 0.002;  // Изменено с -= на +
-        
-        rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
-    }
-}
-
-function handleTouchMove(e) {
-    e.preventDefault();
-    if (isDragging && e.touches.length === 1 && !joystickActive) {
-        const touchX = e.touches[0].clientX;
-        const touchY = e.touches[0].clientY;
-        
-        const deltaX = touchX - touchStartX;
-        const deltaY = touchY - touchStartY;
-        
-        rotationX += deltaX * 0.01;  // Изменено с -= на +
-        rotationY += deltaY * 0.01;  // Изменено с -= на +
-        
-        rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
-        
-        touchStartX = touchX;
-        touchStartY = touchY;
-    }
-}
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (isDragging && e.touches.length === 1 && !joystickActive) {
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const deltaX = touchX - touchStartX;
+                const deltaY = touchY - touchStartY;
+                
+                rotationX += deltaX * 0.01;
+                rotationY += deltaY * 0.01;
+                
+                rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
+                
+                touchStartX = touchX;
+                touchStartY = touchY;
+            }
+        }
         
         function handleJoystickStart(e) {
             e.preventDefault();
@@ -759,25 +759,6 @@ function handleTouchMove(e) {
             }
         }
         
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (isDragging && e.touches.length === 1 && !joystickActive) {
-                const touchX = e.touches[0].clientX;
-                const touchY = e.touches[0].clientY;
-                
-                const deltaX = touchX - touchStartX;
-                const deltaY = touchY - touchStartY;
-                
-                rotationX -= deltaX * 0.01;
-                rotationY -= deltaY * 0.01;
-                
-                rotationY = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationY));
-                
-                touchStartX = touchX;
-                touchStartY = touchY;
-            }
-        }
-        
         function handleTouchEnd(e) {
             e.preventDefault();
             isDragging = false;
@@ -816,8 +797,8 @@ function handleTouchMove(e) {
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
             } else {
-                canvas.width = 856;
-                canvas.height = 480;
+                canvas.width = 854;
+                canvas.height = 489;
             }
         }
         
@@ -832,4 +813,4 @@ function handleTouchMove(e) {
         init();
     </script>
 </body>
-</html>
+    </html>

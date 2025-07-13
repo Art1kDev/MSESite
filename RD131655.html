@@ -8,7 +8,7 @@
             constructor(){
                 this.canvas=document.getElementById('gameCanvas');
                 this.gl=this.canvas.getContext('webgl');
-                if(!this.gl){alert('WebGL required');return}
+                if(!this.gl)return;
                 this.running=true;
                 this.lastTime=0;
                 this.worldSize=32;
@@ -86,14 +86,6 @@
                         }
                     }
                 }
-                for(let i=0;i<100;i++){
-                    const x=Math.floor(Math.random()*this.worldSize);
-                    const y=Math.floor(Math.random()*this.worldSize/2)+this.worldSize/4;
-                    const z=Math.floor(Math.random()*this.worldSize);
-                    if(this.getBlock(x,y,z))continue;
-                    this.setBlock(x,y,z,Math.random()>0.5?'grass':'stone');
-                }
-                this.createWorldMesh();
             }
             setBlock(x,y,z,type){this.world[`${x},${y},${z}`]=type}
             getBlock(x,y,z){return this.world[`${x},${y},${z}`]}
@@ -168,9 +160,9 @@
             }
             setupPlayer(){
                 this.player={
-                    x:this.worldSize/2,
-                    y:this.worldSize/2+5,
-                    z:this.worldSize/2,
+                    x:Math.random()*this.worldSize,
+                    y:this.worldSize,
+                    z:Math.random()*this.worldSize,
                     rotationX:0,
                     rotationY:0,
                     velocityY:0,
@@ -179,7 +171,7 @@
             }
             setupControls(){
                 this.keys={};
-                document.addEventListener('keydown',e=>{this.keys[e.keyCode]=true;if(e.keyCode===82)this.setupPlayer()});
+                document.addEventListener('keydown',e=>{this.keys[e.keyCode]=true});
                 document.addEventListener('keyup',e=>{this.keys[e.keyCode]=false});
                 this.canvas.addEventListener('click',()=>{this.canvas.requestPointerLock()});
                 document.addEventListener('mousemove',e=>{
@@ -226,7 +218,7 @@
                 this.moveBackward=createButton('moveBackward',20,btnSize+30,'↓');
                 this.moveLeft=createButton('moveLeft',btnSize+30,btnSize+30,'←');
                 this.moveRight=createButton('moveRight',btnSize+30,20,'→');
-                this.jumpBtn=createButton('jumpBtn',window.innerWidth-btnSize-20,20,'JUMP');
+                this.jumpBtn=createButton('jumpBtn',window.innerWidth-btnSize-20,20,'↑');
                 this.moveForward.addEventListener('touchstart',()=>{this.keys[87]=true});
                 this.moveForward.addEventListener('touchend',()=>{this.keys[87]=false});
                 this.moveBackward.addEventListener('touchstart',()=>{this.keys[83]=true});
@@ -277,6 +269,10 @@
                     this.player.velocityY=0;
                     this.player.onGround=true;
                 }
+                if(this.player.x<0)this.player.x=0;
+                if(this.player.x>this.worldSize)this.player.x=this.worldSize;
+                if(this.player.z<0)this.player.z=0;
+                if(this.player.z>this.worldSize)this.player.z=this.worldSize;
             }
             createModelViewMatrix(){
                 const matrix=new Float32Array(16);

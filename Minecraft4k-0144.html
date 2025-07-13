@@ -6,7 +6,8 @@
     <style>
         body {
             background: url('BackGround.png');
-            background-size: cover;
+            background-size: 200px;
+            background-repeat: repeat;
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 0;
@@ -37,8 +38,6 @@
             font-size: 16px;
             text-shadow: 0 0 3px rgba(255, 255, 255, 0.7);
         }
-        
-        /* Crosshair styles */
         #crosshair {
             position: absolute;
             top: 50%;
@@ -49,28 +48,23 @@
             pointer-events: none;
             z-index: 10;
         }
-        
         #crosshair::before, #crosshair::after {
             content: '';
             position: absolute;
             background: white;
         }
-        
         #crosshair::before {
             width: 2px;
             height: 10px;
             left: 9px;
             top: 5px;
         }
-        
         #crosshair::after {
             width: 10px;
             height: 2px;
             left: 5px;
             top: 9px;
         }
-        
-        /* Mobile controls */
         #mobileControls {
             display: none;
             position: fixed;
@@ -81,7 +75,6 @@
             pointer-events: none;
             z-index: 100;
         }
-        
         #movementPad {
             position: absolute;
             left: 20px;
@@ -93,7 +86,6 @@
             border-radius: 50%;
             touch-action: none;
         }
-        
         #joystick {
             position: absolute;
             width: 50px;
@@ -104,7 +96,6 @@
             top: 35px;
             touch-action: none;
         }
-        
         #actionButtons {
             position: absolute;
             right: 20px;
@@ -113,7 +104,6 @@
             flex-direction: column;
             gap: 10px;
         }
-        
         .actionBtn {
             width: 60px;
             height: 60px;
@@ -130,19 +120,15 @@
             pointer-events: auto;
             border: 2px solid rgba(255, 255, 255, 0.5);
         }
-        
         #jumpBtn {
             background: rgba(0, 100, 255, 0.7);
         }
-        
         #breakBtn {
             background: rgba(255, 50, 50, 0.7);
         }
-        
         #placeBtn {
             background: rgba(50, 255, 50, 0.7);
         }
-        
         #fullscreenBtn {
             position: fixed;
             top: 10px;
@@ -160,7 +146,6 @@
             cursor: pointer;
             border: 1px solid white;
         }
-        
         #exitBtn {
             position: fixed;
             top: 10px;
@@ -178,7 +163,6 @@
             cursor: pointer;
             border: 1px solid white;
         }
-        
         #fpsCounter {
             position: fixed;
             top: 10px;
@@ -189,7 +173,6 @@
             text-shadow: 0 0 3px black;
             z-index: 100;
         }
-        
         @media (max-width: 1024px) {
             #mobileControls {
                 display: block;
@@ -204,7 +187,6 @@
                 display: flex;
             }
         }
-        
         @media (min-width: 1025px) {
             #fullscreenBtn {
                 display: none;
@@ -243,8 +225,6 @@
         const ctx = canvas.getContext('2d');
         const fpsCounter = document.getElementById('fpsCounter');
         const M = new Array(32767).fill(0);
-        
-        // Game state
         let world = new Array(262144);
         let textures = new Array(12288);
         let playerX = 96.5, playerY = 65.0, playerZ = 96.5;
@@ -256,8 +236,6 @@
         let fps = 0;
         let fpsTime = 0;
         let fpsFrames = 0;
-        
-        // Touch controls state
         let joystickActive = false;
         let joystickStartX = 0;
         let joystickStartY = 0;
@@ -265,16 +243,13 @@
         let joystickY = 0;
         let isDragging = false;
         let touchStartX = 0, touchStartY = 0;
-        
-        // Initialize the game
+
         function init() {
-            // Initialize random world
             const random = new Random(18295169);
             for (let i = 0; i < 262144; i++) {
                 world[i] = Math.floor(i / 64) % 64 > 32 + random.nextInt(8) ? random.nextInt(8) + 1 : 0;
             }
             
-            // Initialize textures
             for (let i = 1; i < 16; i++) {
                 for (let u = 0; u < 48; u++) {
                     for (let v = 0; v < 16; v++) {
@@ -342,7 +317,6 @@
                 }
             }
             
-            // Setup event listeners
             document.addEventListener('keydown', (e) => handleKey(e, 1));
             document.addEventListener('keyup', (e) => handleKey(e, 0));
             canvas.addEventListener('mousedown', handleMouseDown);
@@ -351,7 +325,6 @@
             canvas.addEventListener('click', requestPointerLock);
             canvas.addEventListener('contextmenu', (e) => e.preventDefault());
             
-            // Touch event listeners for joystick
             const joystick = document.getElementById('joystick');
             const movementPad = document.getElementById('movementPad');
             
@@ -360,13 +333,11 @@
             movementPad.addEventListener('touchend', handleJoystickEnd, { passive: false });
             movementPad.addEventListener('touchcancel', handleJoystickEnd, { passive: false });
             
-            // Touch event listeners for camera control
             canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
             canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
             canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
             canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
             
-            // Mobile control buttons
             document.getElementById('jumpBtn').addEventListener('touchstart', () => M[32] = 1);
             document.getElementById('jumpBtn').addEventListener('touchend', () => M[32] = 0);
             document.getElementById('jumpBtn').addEventListener('touchcancel', () => M[32] = 0);
@@ -379,26 +350,21 @@
             document.getElementById('placeBtn').addEventListener('touchend', () => M[0] = 0);
             document.getElementById('placeBtn').addEventListener('touchcancel', () => M[0] = 0);
             
-            // Fullscreen button
             document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
             
-            // Exit button
             document.getElementById('exitBtn').addEventListener('click', () => {
                 window.location.href = 'index.html';
             });
             
-            // Handle fullscreen change
             document.addEventListener('fullscreenchange', handleFullscreenChange);
             document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.addEventListener('mozfullscreenchange', handleFullscreenChange);
             document.addEventListener('MSFullscreenChange', handleFullscreenChange);
             
-            // Start game loop
             lastTime = performance.now();
             requestAnimationFrame(gameLoop);
         }
         
-        // Request pointer lock
         function requestPointerLock() {
             if (!document.pointerLockElement) {
                 canvas.requestPointerLock = canvas.requestPointerLock || 
@@ -408,12 +374,10 @@
             }
         }
         
-        // Game loop
         function gameLoop(timestamp) {
             const deltaTime = Math.min(timestamp - lastTime, 100) / 1000;
             lastTime = timestamp;
             
-            // Update FPS counter
             fpsFrames++;
             if (timestamp - fpsTime >= 1000) {
                 fps = Math.round(fpsFrames * 1000 / (timestamp - fpsTime));
@@ -428,7 +392,6 @@
             requestAnimationFrame(gameLoop);
         }
         
-        // Update player position and physics
         function updatePlayer(deltaTime) {
             const sinX = Math.sin(rotationX);
             const cosX = Math.cos(rotationX);
@@ -519,7 +482,6 @@
             }
         }
         
-        // Render the world
         function render() {
             const width = 214;
             const height = 120;
@@ -534,7 +496,6 @@
             selectedBlock = -1;
             let closestDistance = 5.0;
             
-            // Always use center of screen for block selection
             let renderMouseX = Math.floor(width / 2);
             let renderMouseY = Math.floor(height / 2);
             
@@ -798,7 +759,7 @@
                 canvas.height = window.innerHeight;
             } else {
                 canvas.width = 854;
-                canvas.height = 489;
+                canvas.height = 480;
             }
         }
         

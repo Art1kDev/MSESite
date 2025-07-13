@@ -5,7 +5,12 @@
     <title>RD132211 Minecraft</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
-        canvas { display: block; }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            width: 854px;
+            height: 480px;
+        }
         #crosshair {
             position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
             transform: translate(-50%, -50%); pointer-events: none; opacity: 0.5;
@@ -30,8 +35,8 @@
 <body>
     <div id="crosshair"></div>
     <div id="exitButton">Exit</div>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three @0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three @0.132.2/examples/js/controls/PointerLockControls.js"></script>
     <script>
         const CHUNK_SIZE = 16;
         const RENDER_DISTANCE = 3;
@@ -39,10 +44,7 @@
         const WORLD_DEPTH = 64;
         const BLOCK_SIZE = 1;
         const MAX_BUILD_DISTANCE = 5;
-        
-        const WORLD_POSITION = { x: 0, y: 0, z: 0 };
         const SPAWN_POINT = { x: 0, y: 3, z: 0 };
-        
         let scene, camera, renderer, controls;
         let world = {};
         let loadedChunks = {};
@@ -52,7 +54,6 @@
         let highlightedBlock = null;
         let highlightStartTime = 0;
         const HIGHLIGHT_DURATION = 1.0;
-
         let player = {
             position: new THREE.Vector3(SPAWN_POINT.x, SPAWN_POINT.y, SPAWN_POINT.z),
             velocity: new THREE.Vector3(),
@@ -69,89 +70,74 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x93c4ff); // Фиксированный цвет неба
-            
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+            const loader = new THREE.TextureLoader();
+            loader.load('BackGround.png', function(texture) {
+                scene.background = texture;
+            });
+
+            camera = new THREE.PerspectiveCamera(75, 854 / 480, 0.1, 1000);
             camera.position.copy(player.position);
             camera.position.y += player.height;
-            
+
             renderer = new THREE.WebGLRenderer({ 
                 antialias: false,
                 powerPreference: "high-performance"
             });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(854, 480);
             document.body.appendChild(renderer.domElement);
-            
-            setupLights();
-            
-            // Предзагрузка текстур
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(100, 100, 50);
+            scene.add(directionalLight);
+
             const textureLoader = new THREE.TextureLoader();
             const textures = [
-                'https://i.postimg.cc/Dw9KdZ9N/5382343738950545341.jpg',
-                'https://i.postimg.cc/15wv8rGb/5382343738950545340.jpg',
-                'https://i.postimg.cc/8zYQ0X9K/grass.jpg'
+                'https://i.postimg.cc/Dw9KdZ9N/5382343738950545341.jpg ',
+                'https://i.postimg.cc/15wv8rGb/5382343738950545340.jpg ',
+                'https://i.postimg.cc/8zYQ0X9K/grass.jpg '
             ].map(url => {
                 const texture = textureLoader.load(url);
                 texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
                 texture.repeat.set(1, 1);
                 return texture;
             });
-            
             [stoneTexture, dirtTexture, grassTexture] = textures;
-            
+
             loadWorld();
             setupControls();
-            
             setTimeout(() => { controls.lock(); }, 100);
             animate();
         }
-        
-        function setupLights() {
-            // Простое статичное освещение
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            directionalLight.position.set(100, 100, 50);
-            scene.add(directionalLight);
-        }
-        
+
         function generateLayeredWorld() {
-            // Оптимизированная генерация мира с использованием буфера
             const positions = [];
-            
             for (let x = -WORLD_WIDTH/2; x < WORLD_WIDTH/2; x++) {
                 for (let z = -WORLD_DEPTH/2; z < WORLD_DEPTH/2; z++) {
                     positions.push({x, y: -1, z, type: 'dirt'});
-                    
                     for (let y = -2; y >= -5; y--) {
                         positions.push({x, y, z, type: 'stone'});
                     }
                 }
             }
-            
-            // Добавляем блоки партиями для оптимизации
             addBlocksBatch(positions);
             saveWorld();
         }
-        
+
         function addBlocksBatch(blocks) {
-            // Создаем геометрию для каждого типа блока
             const blockTypes = {};
-            
             blocks.forEach(block => {
                 if (!blockTypes[block.type]) {
                     blockTypes[block.type] = [];
                 }
                 blockTypes[block.type].push(block);
             });
-            
-            // Создаем меши для каждого типа блока
+
             Object.keys(blockTypes).forEach(type => {
                 const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
                 let material;
-                
                 switch(type) {
                     case 'grass':
                         material = [
@@ -172,38 +158,29 @@
                     default:
                         material = new THREE.MeshStandardMaterial({ color: 0xffffff });
                 }
-                
                 blockTypes[type].forEach(block => {
                     const key = `${block.x},${block.y},${block.z}`;
                     if (world[key]) return;
-                    
                     const cube = Array.isArray(material) 
                         ? new THREE.Mesh(geometry, material)
                         : new THREE.Mesh(geometry, material);
-                    
                     cube.position.set(
                         block.x + BLOCK_SIZE/2, 
                         block.y + BLOCK_SIZE/2, 
                         block.z + BLOCK_SIZE/2
                     );
-                    
                     scene.add(cube);
-                    
                     const originalMaterials = Array.isArray(material) 
                         ? material.map(m => m.clone()) 
                         : material.clone();
-                    
                     world[key] = { 
                         mesh: cube, 
                         type: type, 
                         originalMaterials: originalMaterials
                     };
-                    
-                    // Добавляем блок в соответствующий чанк
                     const chunkX = Math.floor(block.x / CHUNK_SIZE);
                     const chunkZ = Math.floor(block.z / CHUNK_SIZE);
                     const chunkKey = `${chunkX},${chunkZ}`;
-                    
                     if (!loadedChunks[chunkKey]) {
                         loadedChunks[chunkKey] = [];
                     }
@@ -211,7 +188,7 @@
                 });
             });
         }
-        
+
         function saveWorld() {
             const worldData = {};
             for (const key in world) {
@@ -219,36 +196,31 @@
             }
             localStorage.setItem('minecraftWorld', JSON.stringify(worldData));
         }
-        
+
         function loadWorld() {
             const savedWorld = localStorage.getItem('minecraftWorld');
             if (savedWorld) {
                 const worldData = JSON.parse(savedWorld);
                 const blocksToAdd = [];
-                
                 for (const key in worldData) {
                     const [x, y, z] = key.split(',').map(Number);
                     blocksToAdd.push({x, y, z, type: worldData[key]});
                 }
-                
                 addBlocksBatch(blocksToAdd);
             } else {
                 generateLayeredWorld();
             }
         }
-        
+
         function updateChunks() {
             const playerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
             const playerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
-            
-            // Удаляем дальние чанки
             for (const chunkKey in loadedChunks) {
                 const [chunkX, chunkZ] = chunkKey.split(',').map(Number);
                 const distance = Math.max(
                     Math.abs(chunkX - playerChunkX),
                     Math.abs(chunkZ - playerChunkZ)
                 );
-                
                 if (distance > RENDER_DISTANCE) {
                     loadedChunks[chunkKey].forEach(block => {
                         scene.remove(block);
@@ -256,31 +228,25 @@
                     delete loadedChunks[chunkKey];
                 }
             }
-            
-            // Загружаем новые чанки
             for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
                 for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
                     const chunkX = playerChunkX + x;
                     const chunkZ = playerChunkZ + z;
                     const chunkKey = `${chunkX},${chunkZ}`;
-                    
                     if (!loadedChunks[chunkKey]) {
                         loadChunk(chunkX, chunkZ);
                     }
                 }
             }
         }
-        
+
         function loadChunk(chunkX, chunkZ) {
             const chunkKey = `${chunkX},${chunkZ}`;
             loadedChunks[chunkKey] = [];
-            
             const startX = chunkX * CHUNK_SIZE;
             const startZ = chunkZ * CHUNK_SIZE;
             const endX = startX + CHUNK_SIZE;
             const endZ = startZ + CHUNK_SIZE;
-            
-            // Загружаем только блоки, которые есть в мире
             for (const key in world) {
                 const [x, y, z] = key.split(',').map(Number);
                 if (x >= startX && x < endX && z >= startZ && z < endZ) {
@@ -290,15 +256,13 @@
                 }
             }
         }
-        
+
         function highlightBlock(block) {
             if (highlightedBlock && highlightedBlock !== block) {
                 resetBlockHighlight(highlightedBlock);
             }
-            
             highlightedBlock = block;
             highlightStartTime = performance.now();
-            
             if (Array.isArray(block.mesh.material)) {
                 block.mesh.material.forEach(mat => {
                     mat.color.set(0xffffff);
@@ -307,10 +271,9 @@
                 block.mesh.material.color.set(0xffffff);
             }
         }
-        
+
         function resetBlockHighlight(block) {
             if (!block) return;
-            
             if (Array.isArray(block.mesh.material)) {
                 block.mesh.material.forEach((mat, i) => {
                     mat.color.copy(block.originalMaterials[i].color);
@@ -319,60 +282,53 @@
                 block.mesh.material.color.copy(block.originalMaterials.color);
             }
         }
-        
+
         function updateHighlight() {
             if (!highlightedBlock) return;
-            
             const elapsed = (performance.now() - highlightStartTime) / 1000;
             if (elapsed >= HIGHLIGHT_DURATION) {
                 resetBlockHighlight(highlightedBlock);
                 highlightedBlock = null;
             }
         }
-        
+
         function setupControls() {
             controls = new THREE.PointerLockControls(camera, document.body);
-            
             const exitButton = document.getElementById('exitButton');
-            
             controls.addEventListener('lock', () => {
                 exitButton.style.display = 'none';
             });
-            
             controls.addEventListener('unlock', () => {
                 exitButton.style.display = 'block';
             });
-            
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
             document.addEventListener('mousedown', onMouseDown);
             window.addEventListener('resize', onWindowResize);
-            
             exitButton.addEventListener('click', () => {
                 if (!controls.isLocked) {
                     controls.lock();
                 }
             });
         }
-        
+
         function getRandomSpawnPosition() {
             const x = Math.floor(Math.random() * WORLD_WIDTH - WORLD_WIDTH/2);
             const z = Math.floor(Math.random() * WORLD_DEPTH - WORLD_DEPTH/2);
             return { x, y: 5, z };
         }
-        
+
         function respawnPlayer() {
             const spawnPoint = getRandomSpawnPosition();
             player.position.set(spawnPoint.x, spawnPoint.y, spawnPoint.z);
             player.velocity.set(0, 0, 0);
             player.canJump = false;
-            
             if (controls.isLocked) {
                 controls.getObject().position.copy(player.position);
                 controls.getObject().position.y += player.height;
             }
         }
-        
+
         function onKeyDown(event) {
             switch (event.code) {
                 case 'KeyW': player.moveForward = true; break;
@@ -395,7 +351,7 @@
                     break;
             }
         }
-        
+
         function onKeyUp(event) {
             switch (event.code) {
                 case 'KeyW': player.moveForward = false; break;
@@ -404,27 +360,21 @@
                 case 'KeyD': player.moveRight = false; break;
             }
         }
-        
+
         function onMouseDown(event) {
             if (!controls.isLocked) {
                 controls.lock();
                 return;
             }
-            
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            
             const intersects = raycaster.intersectObjects(Object.values(world).map(b => b.mesh));
-            
             if (intersects.length > 0) {
                 const intersect = intersects[0];
-                
                 if (intersect.distance > MAX_BUILD_DISTANCE) return;
-                
                 const blockPos = intersect.object.position.clone();
                 blockPos.x = Math.floor(blockPos.x - BLOCK_SIZE/2);
                 blockPos.y = Math.floor(blockPos.y - BLOCK_SIZE/2);
                 blockPos.z = Math.floor(blockPos.z - BLOCK_SIZE/2);
-                
                 if (event.button === 0) {
                     removeBlock(blockPos.x, blockPos.y, blockPos.z);
                 } else if (event.button === 2) {
@@ -432,24 +382,18 @@
                     normal.x = Math.round(normal.x);
                     normal.y = Math.round(normal.y);
                     normal.z = Math.round(normal.z);
-                    
                     const newPos = blockPos.clone().add(normal);
-                    
-                    // Проверка границ мира
                     if (Math.abs(newPos.x) > WORLD_WIDTH/2 || Math.abs(newPos.z) > WORLD_DEPTH/2) {
                         return;
                     }
-                    
                     const newBlockDistance = player.position.distanceTo(
                         new THREE.Vector3(newPos.x + BLOCK_SIZE/2, newPos.y + BLOCK_SIZE/2, newPos.z + BLOCK_SIZE/2)
                     );
                     if (newBlockDistance > MAX_BUILD_DISTANCE) return;
-                    
                     let blockType = 'stone';
                     if (newPos.y === -1) {
                         blockType = 'dirt';
                     }
-                    
                     if (!getBlock(newPos.x, newPos.y, newPos.z)) {
                         addBlock(newPos.x, newPos.y, newPos.z, blockType);
                         saveWorld();
@@ -457,14 +401,12 @@
                 }
             }
         }
-        
+
         function addBlock(x, y, z, type) {
             const key = `${x},${y},${z}`;
             if (world[key]) return;
-            
             const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
             let material;
-            
             switch(type) {
                 case 'grass':
                     material = [
@@ -485,40 +427,32 @@
                 default:
                     material = new THREE.MeshStandardMaterial({ color: 0xffffff });
             }
-            
             const cube = Array.isArray(material) 
                 ? new THREE.Mesh(geometry, material)
                 : new THREE.Mesh(geometry, material);
-            
             cube.position.set(
                 x + BLOCK_SIZE/2, 
                 y + BLOCK_SIZE/2, 
                 z + BLOCK_SIZE/2
             );
-            
             scene.add(cube);
-            
             const originalMaterials = Array.isArray(material) 
                 ? material.map(m => m.clone()) 
                 : material.clone();
-            
             world[key] = { 
                 mesh: cube, 
                 type: type, 
                 originalMaterials: originalMaterials
             };
-            
-            // Добавляем блок в соответствующий чанк
             const chunkX = Math.floor(x / CHUNK_SIZE);
             const chunkZ = Math.floor(z / CHUNK_SIZE);
             const chunkKey = `${chunkX},${chunkZ}`;
-            
             if (!loadedChunks[chunkKey]) {
                 loadedChunks[chunkKey] = [];
             }
             loadedChunks[chunkKey].push(cube);
         }
-        
+
         function removeBlock(x, y, z) {
             const key = `${x},${y},${z}`;
             if (world[key]) {
@@ -527,117 +461,94 @@
                 saveWorld();
             }
         }
-        
+
         function getBlock(x, y, z) {
             const key = `${x},${y},${z}`;
             return world[key];
         }
-        
+
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = 854 / 480;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(854, 480);
         }
-        
+
         function updatePlayer(delta) {
             const direction = new THREE.Vector3();
             camera.getWorldDirection(direction);
             direction.y = 0;
             direction.normalize();
-            
             const sideDirection = new THREE.Vector3();
             sideDirection.crossVectors(new THREE.Vector3(0, 1, 0), direction);
-            
             const forwardMovement = (Number(player.moveForward) - Number(player.moveBackward));
             const sideMovement = (Number(player.moveLeft)) - (Number(player.moveRight));
-            
             player.velocity.x = (direction.x * forwardMovement + sideDirection.x * sideMovement) * player.speed;
             player.velocity.z = (direction.z * forwardMovement + sideDirection.z * sideMovement) * player.speed;
-            
             player.velocity.y -= 20 * delta;
             if (player.velocity.y < -20) player.velocity.y = -20;
-            
             const deltaX = player.velocity.x * delta;
             const deltaY = player.velocity.y * delta;
             const deltaZ = player.velocity.z * delta;
-            
             const newPos = player.position.clone();
             newPos.x += deltaX;
-            
-            // Проверка границ мира по X
             if (Math.abs(newPos.x) > WORLD_WIDTH/2) {
                 newPos.x = Math.sign(newPos.x) * (WORLD_WIDTH/2 - 1);
                 player.velocity.x = 0;
             }
-            
             if (!checkCollision(newPos)) {
                 player.position.x = newPos.x;
             } else {
                 player.velocity.x = 0;
             }
-            
             newPos.copy(player.position);
             newPos.y += deltaY;
-            
             if (!checkCollision(newPos)) {
                 player.position.y = newPos.y;
             } else {
                 if (deltaY < 0) player.canJump = true;
                 player.velocity.y = 0;
             }
-            
             newPos.copy(player.position);
             newPos.z += deltaZ;
-            
-            // Проверка границ мира по Z
             if (Math.abs(newPos.z) > WORLD_DEPTH/2) {
                 newPos.z = Math.sign(newPos.z) * (WORLD_DEPTH/2 - 1);
                 player.velocity.z = 0;
             }
-            
             if (!checkCollision(newPos)) {
                 player.position.z = newPos.z;
             } else {
                 player.velocity.z = 0;
             }
-            
             if (controls.isLocked) {
                 controls.getObject().position.copy(player.position);
                 controls.getObject().position.y += player.height;
             }
         }
-        
+
         function checkCollision(position) {
             const radius = player.radius;
             const height = player.height;
-            
             for (let yCheck = 0; yCheck <= height; yCheck += height) {
                 const checkY = position.y + yCheck;
-                
                 for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
                     const checkX = position.x + Math.cos(angle) * radius;
                     const checkZ = position.z + Math.sin(angle) * radius;
-                    
                     const blockX = Math.floor(checkX);
                     const blockY = Math.floor(checkY);
                     const blockZ = Math.floor(checkZ);
-                    
                     if (getBlock(blockX, blockY, blockZ)) {
                         return true;
                     }
                 }
             }
-            
             return false;
         }
-        
+
         function checkLookingAtBlock() {
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             const intersects = raycaster.intersectObjects(Object.values(world).map(b => b.mesh));
-            
             if (intersects.length > 0) {
                 const intersect = intersects[0];
-                
                 if (intersect.distance > MAX_BUILD_DISTANCE) {
                     if (highlightedBlock) {
                         resetBlockHighlight(highlightedBlock);
@@ -645,12 +556,10 @@
                     }
                     return;
                 }
-                
                 const blockPos = intersect.object.position.clone();
                 blockPos.x = Math.floor(blockPos.x - BLOCK_SIZE/2);
                 blockPos.y = Math.floor(blockPos.y - BLOCK_SIZE/2);
                 blockPos.z = Math.floor(blockPos.z - BLOCK_SIZE/2);
-                
                 const block = getBlock(blockPos.x, blockPos.y, blockPos.z);
                 highlightBlock(block);
             } else {
@@ -660,20 +569,17 @@
                 }
             }
         }
-        
+
         function animate() {
             requestAnimationFrame(animate);
-            
             const delta = clock.getDelta();
-            
             updatePlayer(delta);
             checkLookingAtBlock();
             updateHighlight();
             updateChunks();
-            
             renderer.render(scene, camera);
         }
-        
+
         init();
     </script>
 </body>

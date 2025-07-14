@@ -1,716 +1,202 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>CaveGame</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-image: url('BackGround.png');
-            background-repeat: repeat;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            display: block;
-            width: 854px;
-            height: 480px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>CaveGame</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: url('background.png') repeat;
+    }
+    canvas {
+      display: block;
+      width: 854px;
+      height: 480px;
+      margin: auto;
+      position: absolute;
+      left: 0; right: 0; top: 0; bottom: 0;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+<canvas id="gameCanvas"></canvas>
 
-    <script>
-        // Текстуры (замените на реальные пути к вашим текстурам)
-        const TEXTURES = {
-            grass: 'grass.png',
-            stone: 'stone.png',
-            background: 'BackGround.png'
-        };
+<script src="https://cdn.jsdelivr.net/npm/three @0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three @0.160.0/examples/js/controls/PointerLockControls.js"></script>
+<script>
+const CHUNK_SIZE = 16;
+const WORLD_SIZE_X = 64;
+const WORLD_SIZE_Y = 32;
+const WORLD_SIZE_Z = 64;
 
-        // Конфигурация мира
-        const WORLD_CONFIG = {
-            width: 64,
-            height: 32,
-            depth: 64,
-            chunkSize: 16,
-            stoneHeight: 8,
-            caveThreshold: 0.3
-        };
+let scene, camera, renderer, controls;
+let player, velocity = new THREE.Vector3();
+let keys = {};
+let isOnGround = false;
+let raycaster = new THREE.Raycaster();
 
-        // Инициализация WebGL
-        const canvas = document.getElementById('gameCanvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+let textures = {};
+let blocks = [];
 
-        if (!gl) {
-            alert('WebGL не поддерживается вашим браузером!');
-            throw new Error('WebGL not supported');
+init();
+animate();
+
+function init() {
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+  renderer.setSize(854, 480);
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  // Scene
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x87ceeb, 0.002); // Sky blue fog
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(75, 854 / 480, 0.1, 1000);
+
+  // Light
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(10, 20, 10);
+  scene.add(directionalLight);
+
+  // Controls
+  controls = new THREE.PointerLockControls(camera, document.body);
+  document.body.addEventListener('click', () => controls.lock());
+  controls.addEventListener('lock', () => console.log("Locked"));
+  controls.addEventListener('unlock', () => console.log("Unlocked"));
+  scene.add(controls.getObject());
+
+  // Movement
+  window.addEventListener('keydown', e => keys[e.code] = true);
+  window.addEventListener('keyup', e => keys[e.code] = false);
+
+  // Player
+  const geometry = new THREE.BoxGeometry(0.9, 1.8, 0.9);
+  const material = new THREE.MeshBasicMaterial({ color: 0xff0000, visible: false });
+  player = new THREE.Mesh(geometry, material);
+  scene.add(player);
+
+  // Load Textures
+  const loader = new THREE.TextureLoader();
+  loader.load('stone.png', texture => { textures.stone = texture; });
+  loader.load('grass.png', texture => { textures.grass = texture; });
+
+  // Generate World
+  setTimeout(generateWorld, 100);
+}
+
+function generateWorld() {
+  for (let x = 0; x < WORLD_SIZE_X; x++) {
+    for (let z = 0; z < WORLD_SIZE_Z; z++) {
+      let surfaceY = Math.floor(Math.random() * 3) + 10;
+      for (let y = 0; y < WORLD_SIZE_Y; y++) {
+        if (y === surfaceY && y > 0) {
+          addBlock(x, y, z, 'grass');
+        } else if (y < surfaceY) {
+          let cave = Math.random() < 0.01 && y > 2;
+          if (!cave) addBlock(x, y, z, 'stone');
         }
+      }
+    }
+  }
+}
 
-        canvas.width = 854;
-        canvas.height = 480;
+function addBlock(x, y, z, type) {
+  const material = new THREE.MeshBasicMaterial({ map: textures[type] });
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const block = new THREE.Mesh(geometry, material);
+  block.position.set(x - WORLD_SIZE_X / 2, y, z - WORLD_SIZE_Z / 2);
+  scene.add(block);
+  blocks.push(block);
+}
 
-        // Шейдеры
-        const vertexShaderSource = `
-            attribute vec3 aPosition;
-            attribute vec2 aTexCoord;
-            uniform mat4 uModelViewMatrix;
-            uniform mat4 uProjectionMatrix;
-            varying vec2 vTexCoord;
-            
-            void main() {
-                gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
-                vTexCoord = aTexCoord;
-            }
-        `;
+function teleportRandom() {
+  let x = Math.floor(Math.random() * WORLD_SIZE_X) - WORLD_SIZE_X / 2;
+  let z = Math.floor(Math.random() * WORLD_SIZE_Z) - WORLD_SIZE_Z / 2;
+  for (let y = WORLD_SIZE_Y; y >= 0; y--) {
+    const block = getBlockAt(x, y, z);
+    if (block && block.material.map === textures.grass) {
+      controls.getObject().position.set(x + 0.5, y + 2, z + 0.5);
+      velocity.set(0, 0, 0);
+      return;
+    }
+  }
+}
 
-        const fragmentShaderSource = `
-            precision mediump float;
-            varying vec2 vTexCoord;
-            uniform sampler2D uTexture;
-            
-            void main() {
-                gl_FragColor = texture2D(uTexture, vTexCoord);
-            }
-        `;
+function getBlockAt(x, y, z) {
+  for (let b of blocks) {
+    if (Math.abs(b.position.x - x) < 0.1 &&
+        Math.abs(b.position.y - y) < 0.1 &&
+        Math.abs(b.position.z - z) < 0.1)
+      return b;
+  }
+  return null;
+}
 
-        // Компиляция шейдеров
-        function compileShader(gl, source, type) {
-            const shader = gl.createShader(type);
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-            
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.error('Ошибка компиляции шейдера:', gl.getShaderInfoLog(shader));
-                gl.deleteShader(shader);
-                return null;
-            }
-            
-            return shader;
-        }
+function updatePlayerMovement(deltaTime) {
+  const speed = 5;
+  const move = new THREE.Vector3();
 
-        const vertexShader = compileShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
-        const fragmentShader = compileShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
-        
-        const shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
-        
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-            console.error('Ошибка линковки программы:', gl.getProgramInfoLog(shaderProgram));
-        }
+  if (keys['KeyW']) move.z -= 1;
+  if (keys['KeyS']) move.z += 1;
+  if (keys['KeyA']) move.x -= 1;
+  if (keys['KeyD']) move.x += 1;
 
-        // Получение атрибутов и униформов
-        const programInfo = {
-            program: shaderProgram,
-            attribLocations: {
-                position: gl.getAttribLocation(shaderProgram, 'aPosition'),
-                texCoord: gl.getAttribLocation(shaderProgram, 'aTexCoord'),
-            },
-            uniformLocations: {
-                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-                modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-                texture: gl.getUniformLocation(shaderProgram, 'uTexture'),
-            },
-        };
+  move.normalize();
+  move.applyEuler(camera.rotation);
+  move.y = 0;
 
-        // Текстуры
-        const textures = {};
-        function loadTexture(gl, url) {
-            const texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            
-            // Временная текстура
-            const level = 0;
-            const internalFormat = gl.RGBA;
-            const width = 1;
-            const height = 1;
-            const border = 0;
-            const srcFormat = gl.RGBA;
-            const srcType = gl.UNSIGNED_BYTE;
-            const pixel = new Uint8Array([0, 0, 255, 255]); // синий цвет
-            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, srcFormat, srcType, pixel);
-            
-            const image = new Image();
-            image.onload = function() {
-                gl.bindTexture(gl.TEXTURE_2D, texture);
-                gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
-                
-                if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-                    gl.generateMipmap(gl.TEXTURE_2D);
-                } else {
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                }
-            };
-            image.src = url;
-            
-            return texture;
-        }
+  controls.moveRight(move.x * deltaTime * speed);
+  controls.moveForward(move.z * deltaTime * speed);
 
-        function isPowerOf2(value) {
-            return (value & (value - 1)) === 0;
-        }
+  // Jump
+  if (keys['Space'] && isOnGround) {
+    velocity.y = 8;
+    isOnGround = false;
+  }
 
-        // Загрузка текстур
-        textures.grass = loadTexture(gl, TEXTURES.grass);
-        textures.stone = loadTexture(gl, TEXTURES.stone);
+  // Gravity
+  velocity.y -= 9.8 * deltaTime;
+  controls.getObject().position.addScaledVector(velocity, deltaTime);
 
-        // Генерация мира
-        class World {
-            constructor() {
-                this.blocks = new Array(WORLD_CONFIG.width);
-                for (let x = 0; x < WORLD_CONFIG.width; x++) {
-                    this.blocks[x] = new Array(WORLD_CONFIG.height);
-                    for (let y = 0; y < WORLD_CONFIG.height; y++) {
-                        this.blocks[x][y] = new Array(WORLD_CONFIG.depth);
-                    }
-                }
-                
-                this.generateTerrain();
-                this.generateCaves();
-            }
-            
-            generateTerrain() {
-                const { width, height, depth, stoneHeight } = WORLD_CONFIG;
-                
-                for (let x = 0; x < width; x++) {
-                    for (let z = 0; z < depth; z++) {
-                        // Генерация высоты поверхности (простой шум)
-                        const surfaceHeight = Math.floor(
-                            (noise.simplex2(x / 20, z / 20) * 0.5 + 0.5) * 10 + height / 2
-                        );
-                        
-                        for (let y = 0; y < height; y++) {
-                            if (y > surfaceHeight) {
-                                this.blocks[x][y][z] = 0; // воздух
-                            } else if (y === surfaceHeight) {
-                                this.blocks[x][y][z] = 1; // трава
-                            } else if (y > surfaceHeight - stoneHeight) {
-                                this.blocks[x][y][z] = 2; // камень
-                            } else {
-                                this.blocks[x][y][z] = 2; // камень (глубже)
-                            }
-                        }
-                    }
-                }
-            }
-            
-            generateCaves() {
-                const { width, height, depth, caveThreshold } = WORLD_CONFIG;
-                
-                for (let x = 0; x < width; x++) {
-                    for (let y = 1; y < height - 1; y++) {
-                        for (let z = 0; z < depth; z++) {
-                            // 3D шум для пещер
-                            const caveValue = noise.simplex3(x / 10, y / 5, z / 10);
-                            if (caveValue > caveThreshold && this.blocks[x][y][z] !== 0) {
-                                this.blocks[x][y][z] = 0; // воздух (пещера)
-                            }
-                        }
-                    }
-                }
-            }
-            
-            getBlock(x, y, z) {
-                if (x < 0 || x >= WORLD_CONFIG.width || 
-                    y < 0 || y >= WORLD_CONFIG.height || 
-                    z < 0 || z >= WORLD_CONFIG.depth) {
-                    return 0; // за пределами мира - воздух
-                }
-                return this.blocks[x][y][z];
-            }
-        }
+  // Collision detection
+  const pos = controls.getObject().position.clone();
+  const feetPos = pos.clone().add(new THREE.Vector3(0, -1, 0));
+  const headPos = pos.clone().add(new THREE.Vector3(0, 1, 0));
 
-        // Игрок
-        class Player {
-            constructor() {
-                this.position = [WORLD_CONFIG.width / 2, WORLD_CONFIG.height + 5, WORLD_CONFIG.depth / 2];
-                this.rotation = [0, 0]; // pitch, yaw
-                this.velocity = [0, 0, 0];
-                this.onGround = false;
-                this.speed = 0.1;
-                this.jumpForce = 0.15;
-                this.height = 1.8;
-            }
-            
-            update(keys, world) {
-                // Гравитация
-                this.velocity[1] -= 0.02;
-                
-                // Движение
-                const moveVector = [0, 0, 0];
-                const [pitch, yaw] = this.rotation;
-                
-                if (keys['w']) {
-                    moveVector[0] += Math.sin(yaw) * this.speed;
-                    moveVector[2] += Math.cos(yaw) * this.speed;
-                }
-                if (keys['s']) {
-                    moveVector[0] -= Math.sin(yaw) * this.speed;
-                    moveVector[2] -= Math.cos(yaw) * this.speed;
-                }
-                if (keys['a']) {
-                    moveVector[0] += Math.sin(yaw - Math.PI/2) * this.speed;
-                    moveVector[2] += Math.cos(yaw - Math.PI/2) * this.speed;
-                }
-                if (keys['d']) {
-                    moveVector[0] += Math.sin(yaw + Math.PI/2) * this.speed;
-                    moveVector[2] += Math.cos(yaw + Math.PI/2) * this.speed;
-                }
-                if (keys[' '] && this.onGround) {
-                    this.velocity[1] = this.jumpForce;
-                    this.onGround = false;
-                }
-                
-                // Применение движения
-                this.velocity[0] = moveVector[0];
-                this.velocity[2] = moveVector[2];
-                
-                // Коллизии
-                this.handleCollisions(world);
-                
-                // Обновление позиции
-                this.position[0] += this.velocity[0];
-                this.position[1] += this.velocity[1];
-                this.position[2] += this.velocity[2];
-            }
-            
-            handleCollisions(world) {
-                const [px, py, pz] = this.position;
-                const [vx, vy, vz] = this.velocity;
-                
-                // Проверка коллизий по Y
-                this.onGround = false;
-                const feetY = py - this.height / 2;
-                const headY = py + this.height / 2;
-                
-                // Проверка под ногами
-                if (vy < 0) {
-                    const blockX = Math.floor(px);
-                    const blockY = Math.floor(feetY + vy);
-                    const blockZ = Math.floor(pz);
-                    
-                    if (world.getBlock(blockX, blockY, blockZ) !== 0) {
-                        this.position[1] = blockY + 1 + this.height / 2;
-                        this.velocity[1] = 0;
-                        this.onGround = true;
-                    }
-                }
-                
-                // Проверка над головой
-                if (vy > 0) {
-                    const blockX = Math.floor(px);
-                    const blockY = Math.floor(headY + vy);
-                    const blockZ = Math.floor(pz);
-                    
-                    if (world.getBlock(blockX, blockY, blockZ) !== 0) {
-                        this.position[1] = blockY - this.height / 2;
-                        this.velocity[1] = 0;
-                    }
-                }
-                
-                // Проверка коллизий по X
-                const blockY = Math.floor(py);
-                const blockX = Math.floor(px + vx);
-                const blockZ = Math.floor(pz);
-                
-                if (world.getBlock(blockX, blockY, blockZ) !== 0) {
-                    this.velocity[0] = 0;
-                }
-                
-                // Проверка коллизий по Z
-                const blockZ2 = Math.floor(pz + vz);
-                
-                if (world.getBlock(blockX, blockY, blockZ2) !== 0) {
-                    this.velocity[2] = 0;
-                }
-            }
-            
-            teleportRandom(world) {
-                this.position = [
-                    Math.random() * WORLD_CONFIG.width,
-                    WORLD_CONFIG.height + 5,
-                    Math.random() * WORLD_CONFIG.depth
-                ];
-                this.velocity = [0, 0, 0];
-            }
-        }
+  raycaster.set(pos, new THREE.Vector3(0, -1, 0));
+  const intersects = raycaster.intersectObjects(blocks);
+  if (intersects.length > 0 && intersects[0].distance < 0.5) {
+    if (velocity.y <= 0) {
+      velocity.y = 0;
+      isOnGround = true;
+    }
+  }
 
-        // Простой генератор шума (упрощенная версия)
-        const noise = {
-            simplex2: function(xin, yin) {
-                return Math.random() * 2 - 1;
-            },
-            simplex3: function(xin, yin, zin) {
-                return Math.random() * 2 - 1;
-            }
-        };
+  // Falling into void
+  if (pos.y < -5) {
+    isOnGround = true;
+    velocity.y = 0;
+  }
 
-        // Временная замена для полноценного шума
-        // В реальном проекте лучше использовать библиотеку noisejs или подобную
-        for (let i = 0; i < 100; i++) {
-            noise.simplex2(i, i);
-            noise.simplex3(i, i, i);
-        }
+  // Teleport on R
+  if (keys['KeyR']) {
+    teleportRandom();
+    keys['KeyR'] = false;
+  }
+}
 
-        // Инициализация мира и игрока
-        const world = new World();
-        const player = new Player();
-
-        // Управление
-        const keys = {};
-        document.addEventListener('keydown', (e) => {
-            keys[e.key.toLowerCase()] = true;
-            
-            if (e.key.toLowerCase() === 'r') {
-                player.teleportRandom(world);
-            }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            keys[e.key.toLowerCase()] = false;
-        });
-
-        // Управление мышью
-        let mouseX = 0, mouseY = 0;
-        document.addEventListener('mousemove', (e) => {
-            const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
-            const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
-            
-            player.rotation[0] -= movementY * 0.002;
-            player.rotation[1] -= movementX * 0.002;
-            
-            // Ограничение вертикального вращения
-            player.rotation[0] = Math.max(-Math.PI/2, Math.min(Math.PI/2, player.rotation[0]));
-        });
-
-        // Захват мыши
-        canvas.addEventListener('click', () => {
-            canvas.requestPointerLock = canvas.requestPointerLock || 
-                                        canvas.mozRequestPointerLock || 
-                                        canvas.webkitRequestPointerLock;
-            canvas.requestPointerLock();
-        });
-
-        // Создание меша для блока
-        function createBlockMesh() {
-            const positions = [];
-            const texCoords = [];
-            const indices = [];
-            let index = 0;
-            
-            // Координаты вершин куба
-            const vertices = [
-                // Передняя грань
-                [-0.5, -0.5,  0.5], [ 0.5, -0.5,  0.5], [ 0.5,  0.5,  0.5], [-0.5,  0.5,  0.5],
-                // Задняя грань
-                [-0.5, -0.5, -0.5], [-0.5,  0.5, -0.5], [ 0.5,  0.5, -0.5], [ 0.5, -0.5, -0.5],
-                // Верхняя грань
-                [-0.5,  0.5, -0.5], [-0.5,  0.5,  0.5], [ 0.5,  0.5,  0.5], [ 0.5,  0.5, -0.5],
-                // Нижняя грань
-                [-0.5, -0.5, -0.5], [ 0.5, -0.5, -0.5], [ 0.5, -0.5,  0.5], [-0.5, -0.5,  0.5],
-                // Правая грань
-                [ 0.5, -0.5, -0.5], [ 0.5,  0.5, -0.5], [ 0.5,  0.5,  0.5], [ 0.5, -0.5,  0.5],
-                // Левая грань
-                [-0.5, -0.5, -0.5], [-0.5, -0.5,  0.5], [-0.5,  0.5,  0.5], [-0.5,  0.5, -0.5]
-            ];
-            
-            // Текстурные координаты
-            const faceTexCoords = [
-                [0, 0], [1, 0], [1, 1], [0, 1]
-            ];
-            
-            // Индексы для каждой грани
-            const faceIndices = [
-                [0, 1, 2, 0, 2, 3],    // перед
-                [4, 5, 6, 4, 6, 7],    // зад
-                [8, 9, 10, 8, 10, 11], // верх
-                [12, 13, 14, 12, 14, 15], // низ
-                [16, 17, 18, 16, 18, 19], // право
-                [20, 21, 22, 20, 22, 23]  // лево
-            ];
-            
-            // Собираем все грани
-            for (let face = 0; face < 6; face++) {
-                for (let i = 0; i < 4; i++) {
-                    positions.push(...vertices[face * 4 + i]);
-                    texCoords.push(...faceTexCoords[i]);
-                }
-                
-                for (let i = 0; i < 6; i++) {
-                    indices.push(faceIndices[face][i] + face * 4);
-                }
-            }
-            
-            return {
-                positions: new Float32Array(positions),
-                texCoords: new Float32Array(texCoords),
-                indices: new Uint16Array(indices),
-                vertexCount: indices.length
-            };
-        }
-
-        // Создаем меш для блока
-        const blockMesh = createBlockMesh();
-
-        // Буферы для рендеринга блоков
-        const blockBuffers = {
-            position: gl.createBuffer(),
-            texCoord: gl.createBuffer(),
-            index: gl.createBuffer()
-        };
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, blockBuffers.position);
-        gl.bufferData(gl.ARRAY_BUFFER, blockMesh.positions, gl.STATIC_DRAW);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, blockBuffers.texCoord);
-        gl.bufferData(gl.ARRAY_BUFFER, blockMesh.texCoords, gl.STATIC_DRAW);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, blockBuffers.index);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, blockMesh.indices, gl.STATIC_DRAW);
-
-        // Рендеринг
-        function render() {
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            gl.clearColor(0.53, 0.81, 0.98, 1.0); // цвет неба
-            gl.clearDepth(1.0);
-            gl.enable(gl.DEPTH_TEST);
-            gl.depthFunc(gl.LEQUAL);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            
-            // Матрица проекции
-            const projectionMatrix = mat4.create();
-            mat4.perspective(
-                projectionMatrix,
-                45 * Math.PI / 180,
-                canvas.width / canvas.height,
-                0.1,
-                1000.0
-            );
-            
-            // Матрица вида (камеры)
-            const modelViewMatrix = mat4.create();
-            mat4.rotateX(modelViewMatrix, modelViewMatrix, -player.rotation[0]);
-            mat4.rotateY(modelViewMatrix, modelViewMatrix, -player.rotation[1]);
-            mat4.translate(modelViewMatrix, modelViewMatrix, [-player.position[0], -player.position[1], -player.position[2]]);
-            
-            // Рендеринг мира
-            gl.useProgram(programInfo.program);
-            
-            // Установка матриц
-            gl.uniformMatrix4fv(
-                programInfo.uniformLocations.projectionMatrix,
-                false,
-                projectionMatrix
-            );
-            
-            gl.uniformMatrix4fv(
-                programInfo.uniformLocations.modelViewMatrix,
-                false,
-                modelViewMatrix
-            );
-            
-            // Включаем атрибуты
-            gl.bindBuffer(gl.ARRAY_BUFFER, blockBuffers.position);
-            gl.vertexAttribPointer(
-                programInfo.attribLocations.position,
-                3,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-            gl.enableVertexAttribArray(programInfo.attribLocations.position);
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, blockBuffers.texCoord);
-            gl.vertexAttribPointer(
-                programInfo.attribLocations.texCoord,
-                2,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-            gl.enableVertexAttribArray(programInfo.attribLocations.texCoord);
-            
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, blockBuffers.index);
-            
-            // Рендерим видимые блоки
-            const renderDistance = 8;
-            const [px, py, pz] = player.position.map(Math.floor);
-            
-            for (let x = Math.max(0, px - renderDistance); x < Math.min(WORLD_CONFIG.width, px + renderDistance); x++) {
-                for (let y = Math.max(0, py - renderDistance); y < Math.min(WORLD_CONFIG.height, py + renderDistance); y++) {
-                    for (let z = Math.max(0, pz - renderDistance); z < Math.min(WORLD_CONFIG.depth, pz + renderDistance); z++) {
-                        const blockType = world.getBlock(x, y, z);
-                        
-                        if (blockType !== 0) { // 0 = воздух, не рендерим
-                            // Выбираем текстуру в зависимости от типа блока
-                            let texture;
-                            if (blockType === 1) {
-                                texture = textures.grass;
-                            } else {
-                                texture = textures.stone;
-                            }
-                            
-                            gl.bindTexture(gl.TEXTURE_2D, texture);
-                            gl.uniform1i(programInfo.uniformLocations.texture, 0);
-                            
-                            // Матрица модели (позиция блока)
-                            const blockModelViewMatrix = mat4.create();
-                            mat4.translate(blockModelViewMatrix, modelViewMatrix, [x, y, z]);
-                            gl.uniformMatrix4fv(
-                                programInfo.uniformLocations.modelViewMatrix,
-                                false,
-                                blockModelViewMatrix
-                            );
-                            
-                            // Рисуем блок
-                            gl.drawElements(
-                                gl.TRIANGLES,
-                                blockMesh.vertexCount,
-                                gl.UNSIGNED_SHORT,
-                                0
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        // Матричные операции (упрощенная реализация)
-        const mat4 = {
-            create: function() {
-                return new Float32Array(16);
-            },
-            identity: function(out) {
-                out[0] = 1; out[1] = 0; out[2] = 0; out[3] = 0;
-                out[4] = 0; out[5] = 1; out[6] = 0; out[7] = 0;
-                out[8] = 0; out[9] = 0; out[10] = 1; out[11] = 0;
-                out[12] = 0; out[13] = 0; out[14] = 0; out[15] = 1;
-                return out;
-            },
-            perspective: function(out, fovy, aspect, near, far) {
-                const f = 1.0 / Math.tan(fovy / 2);
-                out[0] = f / aspect;
-                out[1] = 0;
-                out[2] = 0;
-                out[3] = 0;
-                out[4] = 0;
-                out[5] = f;
-                out[6] = 0;
-                out[7] = 0;
-                out[8] = 0;
-                out[9] = 0;
-                out[10] = (far + near) / (near - far);
-                out[11] = -1;
-                out[12] = 0;
-                out[13] = 0;
-                out[14] = (2 * far * near) / (near - far);
-                out[15] = 0;
-                return out;
-            },
-            translate: function(out, a, v) {
-                const x = v[0], y = v[1], z = v[2];
-                
-                if (a === out) {
-                    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
-                    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
-                    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
-                    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
-                } else {
-                    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
-                    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-                    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-                    
-                    out[0] = a00; out[1] = a01; out[2] = a02; out[3] = a03;
-                    out[4] = a10; out[5] = a11; out[6] = a12; out[7] = a13;
-                    out[8] = a20; out[9] = a21; out[10] = a22; out[11] = a23;
-                    
-                    out[12] = a00 * x + a10 * y + a20 * z + a[12];
-                    out[13] = a01 * x + a11 * y + a21 * z + a[13];
-                    out[14] = a02 * x + a12 * y + a22 * z + a[14];
-                    out[15] = a03 * x + a13 * y + a23 * z + a[15];
-                }
-                
-                return out;
-            },
-            rotateX: function(out, a, rad) {
-                const s = Math.sin(rad);
-                const c = Math.cos(rad);
-                const a10 = a[4];
-                const a11 = a[5];
-                const a12 = a[6];
-                const a13 = a[7];
-                const a20 = a[8];
-                const a21 = a[9];
-                const a22 = a[10];
-                const a23 = a[11];
-                
-                if (a !== out) {
-                    out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = a[3];
-                    out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
-                }
-                
-                out[4] = a10 * c + a20 * s;
-                out[5] = a11 * c + a21 * s;
-                out[6] = a12 * c + a22 * s;
-                out[7] = a13 * c + a23 * s;
-                
-                out[8] = a20 * c - a10 * s;
-                out[9] = a21 * c - a11 * s;
-                out[10] = a22 * c - a12 * s;
-                out[11] = a23 * c - a13 * s;
-                
-                return out;
-            },
-            rotateY: function(out, a, rad) {
-                const s = Math.sin(rad);
-                const c = Math.cos(rad);
-                const a00 = a[0];
-                const a01 = a[1];
-                const a02 = a[2];
-                const a03 = a[3];
-                const a20 = a[8];
-                const a21 = a[9];
-                const a22 = a[10];
-                const a23 = a[11];
-                
-                if (a !== out) {
-                    out[4] = a[4]; out[5] = a[5]; out[6] = a[6]; out[7] = a[7];
-                    out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
-                }
-                
-                out[0] = a00 * c - a20 * s;
-                out[1] = a01 * c - a21 * s;
-                out[2] = a02 * c - a22 * s;
-                out[3] = a03 * c - a23 * s;
-                
-                out[8] = a00 * s + a20 * c;
-                out[9] = a01 * s + a21 * c;
-                out[10] = a02 * s + a22 * c;
-                out[11] = a03 * s + a23 * c;
-                
-                return out;
-            }
-        };
-
-        // Игровой цикл
-        function gameLoop() {
-            player.update(keys, world);
-            render();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Запуск игры
-        gameLoop();
-    </script>
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = 0.016;
+  if (controls.isLocked) {
+    updatePlayerMovement(delta);
+  }
+  renderer.render(scene, camera);
+}
+</script>
 </body>
 </html>

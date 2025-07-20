@@ -14,9 +14,6 @@
             background-size: 128px 128px;
             background-repeat: repeat;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
             color: white;
@@ -24,42 +21,58 @@
         }
 
         .logo {
-            margin-bottom: 50px;
-            max-width: 80%;
-            transform: translateY(-20%);
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            max-width: 200px;
+            height: auto;
         }
 
         .menu-container {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
             display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
+            flex-direction: column;
+            gap: 15px;
         }
 
         .version-select {
-            padding: 5px;
+            padding: 10px;
             font-size: 16px;
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
+            background-image: url('stone.png');
+            background-size: cover;
+            color: white;
+            border: 2px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
         .launch-text {
             color: white;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
             text-decoration: none;
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
             transition: color 0.2s;
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
         }
         .launch-text:hover {
             color: #0000FF;
+            background-color: rgba(0, 0, 255, 0.2);
         }
 
         .version-info {
             position: absolute;
             bottom: 20px;
-            left: 20px;
+            right: 20px;
             font-size: 14px;
             color: white;
             font-family: 'Arial Bold', Arial, sans-serif;
@@ -68,20 +81,33 @@
         .version-info span {
             color: #0000FF;
         }
+
+        .screenshot {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            max-width: 50%;
+            max-height: 70%;
+            border: 4px solid #555;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
-    <div class="version-info">Version: <span id="versionText">1.4.25</span></div>
     <img src="logo.png" alt="Logo" class="logo">
+    <img src="ScreenShot.png" alt="Screenshot" class="screenshot">
 
     <div class="menu-container">
-        <span class="launch-text" onclick="launchVersion()">Launch</span>
         <select class="version-select" id="versionSelect">
             <option value="Minecraft4k-0144OLD.html">4K-OLD</option>
             <option value="Minecraft4k-0144.html">4K-ORIGINAL</option>
             <option value="RD132211.html">RD132211</option>
         </select>
+        <span class="launch-text" onclick="launchVersion()">LAUNCH</span>
     </div>
+
+    <div class="version-info">Version: <span id="versionText">1.4.25</span></div>
 
     <script>
         function launchVersion() {

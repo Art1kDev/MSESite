@@ -1,58 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>333</title>
+    <title>Minecraft4k</title>
     <style>
         body { 
             margin: 0; 
             padding: 0; 
+            background: #000 url('BackGround.png') repeat; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
             height: 100vh; 
-            background: url('BackGround.png') no-repeat center center fixed; 
-            background-size: cover; 
             overflow: hidden; 
-            font-family: Arial, sans-serif; 
         }
-        #container { 
-            position: relative; 
-            width: 854px; 
-            height: 480px; 
-        }
-        #title { 
-            position: absolute; 
-            top: -50px; 
-            width: 100%; 
-            text-align: center; 
-            color: white; 
-            font-size: 24px; 
-            text-shadow: 2px 2px 4px #000; 
-        }
-        #logo { 
-            position: absolute; 
-            top: 10px; 
-            left: 10px; 
-            z-index: 100; 
-            cursor: pointer; 
+        #gameContainer {
+            position: relative;
         }
         canvas { 
             display: block; 
+            margin: 0 auto; 
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div id="title">Minecraft 4k</div>
-        <img id="logo" src="logo.png" alt="Logo" onclick="window.location.href='index.html'">
-        <canvas id="gameCanvas" width="854" height="480"></canvas>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 854;
+            canvas.width = 856;
             canvas.height = 480;
 
             const M = new Array(32767).fill(0);
@@ -172,7 +151,7 @@
                 const sinY = Math.sin(rotY), cosY = Math.cos(rotY);
                 
                 if (M[2] > 0) {
-                    const mx = (M[2] - 427) / 213.5 * 2;
+                    const mx = (M[2] - 428) / 214 * 2;
                     const my = (M[3] - 240) / 120 * 2;
                     let dist = Math.sqrt(mx * mx + my * my) - 1.2;
                     if (dist < 0) dist = 0;
@@ -261,13 +240,13 @@
                 
                 selectedBlock = -1;
                 hoveredBlock = -1;
-                const imageData = ctx.createImageData(854, 480);
+                const imageData = ctx.createImageData(214, 120);
                 
-                for (let x = 0; x < 854; x++) {
-                    const mx = (x - 427) / 360;
+                for (let x = 0; x < 214; x++) {
+                    const mx = (x - 107) / 90;
                     
-                    for (let y = 0; y < 480; y++) {
-                        const my = (y - 240) / 360;
+                    for (let y = 0; y < 120; y++) {
+                        const my = (y - 60) / 90;
                         let depth = 1;
                         let mz = depth * cosY + my * sinY;
                         let mw = my * cosY - depth * sinY;
@@ -326,7 +305,7 @@
                                     let blockColor = colors[tx + ty * 16 + blockType * 256 * 3];
                                     let isHovered = false;
                                     
-                                    if (x === Math.floor(M[2]) && y === Math.floor(M[3])) {
+                                    if (x === Math.floor(M[2] / 4) && y === Math.floor(M[3] / 4)) {
                                         hoveredBlock = blockIndex;
                                         isHovered = true;
                                         
@@ -364,7 +343,7 @@
                         const r = (pixelColor >> 16 & 255) * pixelBrightness / 255;
                         const g = (pixelColor >> 8 & 255) * pixelBrightness / 255;
                         const b = (pixelColor & 255) * pixelBrightness / 255;
-                        const index = (x + y * 854) * 4;
+                        const index = (x + y * 214) * 4;
                         imageData.data[index] = r;
                         imageData.data[index + 1] = g;
                         imageData.data[index + 2] = b;
@@ -373,14 +352,15 @@
                 }
                 
                 ctx.putImageData(imageData, 0, 0);
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(canvas, 0, 0, 214, 120, 0, 0, 856, 480);
                 
                 requestAnimationFrame(update);
             }
 
             canvas.addEventListener('mousemove', function(e) {
-                const rect = canvas.getBoundingClientRect();
-                M[2] = e.clientX - rect.left;
-                M[3] = e.clientY - rect.top;
+                M[2] = e.clientX - canvas.offsetLeft;
+                M[3] = e.clientY - canvas.offsetTop;
             });
 
             canvas.addEventListener('mousedown', function(e) {
@@ -389,9 +369,8 @@
                 } else {
                     M[0] = 1;
                 }
-                const rect = canvas.getBoundingClientRect();
-                M[2] = e.clientX - rect.left;
-                M[3] = e.clientY - rect.top;
+                M[2] = e.clientX - canvas.offsetLeft;
+                M[3] = e.clientY - canvas.offsetTop;
             });
 
             canvas.addEventListener('mouseup', function() {

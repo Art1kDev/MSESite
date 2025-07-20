@@ -92,10 +92,31 @@
         #exitButton:hover { 
             background: rgba(255,255,255,0.2); 
         }
+
+        #splashScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            z-index: 1000;
+        }
+
+        #splashScreen img {
+            max-width: 100%;
+            max-height: 100%;
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
+        <div id="splashScreen">
+            <img src="Screen.png" alt="Loading Screen">
+        </div>
         <img id="logo" src="logo.png" alt="Logo" onclick="window.location.href='index.html'">
         <div id="crosshair"></div>
         <div id="exitButton">Exit</div>
@@ -139,8 +160,15 @@
         };
 
         function init() {
+            setTimeout(() => {
+                document.getElementById('splashScreen').style.display = 'none';
+                initializeGame();
+            }, 4000);
+        }
+
+        function initializeGame() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x93c4ff); // Фиксированный цвет неба
+            scene.background = new THREE.Color(0x93c4ff);
             
             camera = new THREE.PerspectiveCamera(75, 854/480, 0.1, 1000);
             camera.position.copy(player.position);
@@ -158,7 +186,6 @@
             
             setupLights();
             
-            // Предзагрузка текстур
             const textureLoader = new THREE.TextureLoader();
             const textures = [
                 'https://i.postimg.cc/Dw9KdZ9N/5382343738950545341.jpg',
@@ -181,7 +208,6 @@
         }
         
         function setupLights() {
-            // Простое статичное освещение
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
             
@@ -191,7 +217,6 @@
         }
         
         function generateLayeredWorld() {
-            // Оптимизированная генерация мира с использованием буфера
             const positions = [];
             
             for (let x = -WORLD_WIDTH/2; x < WORLD_WIDTH/2; x++) {
@@ -204,13 +229,11 @@
                 }
             }
             
-            // Добавляем блоки партиями для оптимизации
             addBlocksBatch(positions);
             saveWorld();
         }
         
         function addBlocksBatch(blocks) {
-            // Создаем геометрию для каждого типа блока
             const blockTypes = {};
             
             blocks.forEach(block => {
@@ -220,7 +243,6 @@
                 blockTypes[block.type].push(block);
             });
             
-            // Создаем меши для каждого типа блока
             Object.keys(blockTypes).forEach(type => {
                 const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
                 let material;
@@ -272,7 +294,6 @@
                         originalMaterials: originalMaterials
                     };
                     
-                    // Добавляем блок в соответствующий чанк
                     const chunkX = Math.floor(block.x / CHUNK_SIZE);
                     const chunkZ = Math.floor(block.z / CHUNK_SIZE);
                     const chunkKey = `${chunkX},${chunkZ}`;
@@ -314,7 +335,6 @@
             const playerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
             const playerChunkZ = Math.floor(player.position.z / CHUNK_SIZE);
             
-            // Удаляем дальние чанки
             for (const chunkKey in loadedChunks) {
                 const [chunkX, chunkZ] = chunkKey.split(',').map(Number);
                 const distance = Math.max(
@@ -330,11 +350,10 @@
                 }
             }
             
-            // Загружаем новые чанки
             for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
                 for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
                     const chunkX = playerChunkX + x;
-                    const chunkZ = playerChunkZ + z;
+                    const chunkZ = playerChunkX + z;
                     const chunkKey = `${chunkX},${chunkZ}`;
                     
                     if (!loadedChunks[chunkKey]) {
@@ -353,7 +372,6 @@
             const endX = startX + CHUNK_SIZE;
             const endZ = startZ + CHUNK_SIZE;
             
-            // Загружаем только блоки, которые есть в мире
             for (const key in world) {
                 const [x, y, z] = key.split(',').map(Number);
                 if (x >= startX && x < endX && z >= startZ && z < endZ) {
@@ -507,7 +525,6 @@
                     
                     const newPos = blockPos.clone().add(normal);
                     
-                    // Проверка границ мира
                     if (Math.abs(newPos.x) > WORLD_WIDTH/2 || Math.abs(newPos.z) > WORLD_DEPTH/2) {
                         return;
                     }
@@ -580,7 +597,6 @@
                 originalMaterials: originalMaterials
             };
             
-            // Добавляем блок в соответствующий чанк
             const chunkX = Math.floor(x / CHUNK_SIZE);
             const chunkZ = Math.floor(z / CHUNK_SIZE);
             const chunkKey = `${chunkX},${chunkZ}`;
@@ -630,7 +646,6 @@
             const newPos = player.position.clone();
             newPos.x += deltaX;
             
-            // Проверка границ мира по X
             if (Math.abs(newPos.x) > WORLD_WIDTH/2) {
                 newPos.x = Math.sign(newPos.x) * (WORLD_WIDTH/2 - 1);
                 player.velocity.x = 0;
@@ -655,7 +670,6 @@
             newPos.copy(player.position);
             newPos.z += deltaZ;
             
-            // Проверка границ мира по Z
             if (Math.abs(newPos.z) > WORLD_DEPTH/2) {
                 newPos.z = Math.sign(newPos.z) * (WORLD_DEPTH/2 - 1);
                 player.velocity.z = 0;

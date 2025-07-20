@@ -15,8 +15,6 @@
             background-repeat: repeat;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
             color: white;
@@ -24,16 +22,19 @@
         }
 
         .logo {
-            margin-bottom: 50px;
-            max-width: 80%;
-            transform: translateY(-20%);
+            margin: 20px 0 0 20px;
+            max-width: 40%;
+            align-self: flex-start;
         }
 
         .menu-container {
+            position: absolute;
+            left: 50px;
+            top: 50%;
+            transform: translateY(-50%);
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 20px;
         }
 
         .version-select {
@@ -41,14 +42,6 @@
             font-size: 16px;
             font-family: 'Arial Bold', Arial, sans-serif;
             font-weight: bold;
-            background: url('stone.png') center/cover no-repeat;
-            color: white;
-            border: 2px solid #555;
-            border-radius: 5px;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            cursor: pointer;
         }
 
         .launch-text {

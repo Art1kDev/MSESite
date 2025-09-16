@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>VVVVVV</title>
+<style>
+  body { 
+    margin: 0; 
+    background: #000 url('Res/BackGround.png');
+    background-repeat: repeat;
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    font-family: monospace;
+  }
+  canvas { 
+    image-rendering: pixelated; 
+    image-rendering: crisp-edges; 
+    border: 2px solid #333;
+  }
+  #stats {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 14px;
+    text-shadow: 1px 1px 1px black;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="mainCanvas" width="640" height="480"></canvas>
+<div id="stats">V: 0 | D: 0 | T: 0</div>
+<script>
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const statsDiv = document.getElementById('stats');
+const levelData = "#     #      #  ####       #        ##############################  ###################################    ########------------------####################     #      #   x #    ######      #######xx###                 x  x                  ################    ########                  #  c  xxxx         #   # #      #     #    #                    ###                                          #############    ########   xx        xx   #                  ##### #    x #x    #    #                    ###                                                     c      c         ##        ##                      #     ########     ########           ###### ###                                                                      xx        xx                      #       #    #     #  c   #           ###### ###         x                  x                                                                     xx    #       #          #                  ###### ###         #                  #                                     #                  ###############    #   #####          #                  ######             #                  ##                                    #                  ###############    #       #  ##  ######                 ######             #x                x####                                  #                  #            xx    #       ####        #    ###         ##################  ##                ######                                 #        xx        #                  # x #    x          #######         ###        ##        ##                #######                                #        ##        #                  ######          #       ###        ####                  ##x              x#######                                #        xx        #                  #xxxx# c        # x     ##         ####    ##      ##    ###      xx      #########                               #                  #  C  xxxx         # #  ####   #   ##########        #####  ###################      ##      #########                               #------------------###################     #      #    x #######       ######  #######xxx#########x     xx     x##########                              #                    #xxxxxxxxxxxxxx#      #x     ####   ##xxxxx       ######  ######x   x#########            ###########                              #                    # 777 777 777    #    #      #  #   ##           #######  #####x 777 x########            ###########                              #                    #              = ###  #  #####  #   ##   #------########  ####x       x#######x          x###########                              #                  # #             ####    ##   #    x   ##   -      ########  ###x         x#######          ############                             ##   x    x    x    # #             ####     #   #        ##   -      ########  ###           #######          ###########                              ##   #----#    #----#                c##     #   ###      ##   -      ########  ##x           x######x        x###########          c                  ###   #    #----#    #c                ##    ##    c       ##   -      ########  ##             #######        ############       #######               ###   x    x    x    ###             # ##    #             ##   #------########  #x      x      x######        ###########      ###########             ###                  #               # ##                  ##          ########  #      x#x      ######x      x###########     ################         ###                  #               # ##        ######    ##          ########  #     x###x     #######      ###########      #################       ####                  #   777 777 777 # ##  x    x#    # x  ##          ########  #    x#####x    #######      ##########      ##################       ####                  #xxxxxxxxxxxxxxx# ###########    ########         ########  #   x#######x   #######x    x##########      ###################      ####---------------#  ################# #         #          ##          #######  #   x#######x   ########    ##########       ###################       ###                  #                 #         #          ##          #######  #    x#####x    ########x  x#########        ##################                             #                 #         #          ##          #######  #     x###x     ########x  x#########        #################                              #                 #         #          ##           ######  #      x#x      ########    ########         ################                               #                 ######    ##############          ######  #      x#x      ########    #######          ###############             x   xx   xx   xx   #   ################xxx#              ####           #####  #x     x#x     x########    ######           ##############              #   ##   ##   ## c #         c       ##   #              #####           ####  ##x    x#x    x######### c  #####            ##############              #   ##   ##   ######                 ##   #    c         ######           ###  ###x   x#x   x#################             ###############              #   ##   ## c ######                 ##   ###########    ######## c        ##  ###x   x#x   x###############               ##############              ##   ##   ###########                 # L  # c l L   #     #########         #  ##x    x#x    x##########                   ##############             ###   ## c ###########                   L  #   l L   #      #########        #  #x     x#x     x######                      ##############           #####   ###################                L  #   l L   #       #########       #  #      x#x      #####                      ###############          ###### c ###################               #####    #    ##################      #  #      x#x      #####                      ###############          ########################################### l  #    #    # c  l   xxxxx####      #  #     x###x     ####                       ###############          #################       #        #  x  x    l  #LLLL#    #    l        ####      #  #    x#####x    ###                        ###############               #########      c   #        #         #LLLx    x    xLLLL#        ####      #  #    x#####x    ##         c               ###############                  ###       ####  #777##777#         #                  #        ####      #  #   x#######x   ##        ####             ###############         #####           #######  #777##777#         #                  ######## ####      #  #   x#######x   #        #######            #############          ########     #######     #777##777#=        #                  #  c   # ####      #  #    xxxxxxx    #        ########           ############           #################        #   ##   ##        #                  #        ####      #  #               #        #########           #########             ### c                 777#777##777##        #                  #    #   ####      #  #               #         ########            #####                ###                777       ##   ##  x  x  #                  #    ########      #  #               #          #######              c                   ##  ###777#777#777          ##777###########                  #    ########      #  #               #          ######                                   ##                          ##   ###########xxxx    x    x    #    ########      #          =       #           ####                                    ## c                        ##   ###############    #    #----#    ########      #  c    #######    #                                                    ######xxxxxxxxxxxxxxxxxxxxx##777###############    #    ######    ########      ####################                                                    #############################   ###########------------------#    ########      ######   c                                                               #####x x x x x x x x #######   xxxxxxxxxx#                  #                  ####                                                                     ####                  ######             #                  #                  ##                                                                        ###                  ######           = #                  #######                                                           ####                         #  ##          ##  ######LLL##########                      c                                                             ######                           ##          ##    lc             l       777                                                                           ######                                             l              l                                                                                      #####                               ######        l              l                                               ##                                     ####                                #    #        l              l               777                           ####                ######                ##                                 #    #        l  lllll       l   777     777                             #####                  ####                  c                                 ######        l  l   l       l                                         #######                   ##                                c        c           ######        l  l   l    c  l xxxxxxxxxxxxxxxxxxx#######            ########                                                 ########    ########      ######      ######   ########################################################                                                 ########    ########                  ######   ###########xxxxxxxxxxxxxxxxxx##########################                                                  ########    ########                  ######   ###########  -  -  -  -  -   ##########################                       #                          #### c          ####                  ###### c ##########   -  -  -  -  -      c             ########                  #####   #                        ####            ####     #      #     ###  #####            -  -  -  -  -                     #######         #       ##########         #              ####            ####     ##    ##     ###                   -  -  -  -  -                      #####          ##      ####   ####       ##              ####   #----#   ####     ## ## ##     ###                   -  -  -  -  -  ###                  ####          ###     ###      ##      ###              ####            ####     ## ## ##     ###                   -  -  -  -  -  ###                   ##           ###     ###       #      ###              ####            ####     ##    ##     ###                   x  -  -  -  -                         #           ##      ###               ##              ####            ####     #      #     ###                   #  -  -  -  -                                     #       ###                #              ####            ####                  ###                #  x  -  -  -  -      c                                      ####  =   #                      #####   x    x   ####                  ###              ###  -  -  -  -  -   #########################                  #########                      ######   #    #   ####                  ###      xx      ###xxxxxxxxxxxxxxxxxx###########################                                              ###########    ########                  ###     x##x     ###                  ##############################                                          ############    ########       ####       ###     x##x       # ### # # # # ######   x## ###  x# x #  x   #####                                          #####      #    #      #       #xx#       ###      xx        #  #  # # # # ##        ## xxx   #   #     ##x ###                ##                       #####      #    #      #       #  #       ###                #  #  ###  #  ##  c   #  #       #   #      #   x#               ####                      #####      #    #      #       #  #       #                  #  #  # # # # ## ### ### x      ##               ##             ######                     #####      #    #      #       #  #       #                  #  #  # # # # ## ### #     ###  #     #  ##      ##                                        #####      #    #      #       #  #       #                  #                      x  x##         x   #x    #x##                                       #####      #    #      #       #  #       #      ######      # ### ## ### ### # #   ## #x###  ###               #                                       #####      #    #      #       #  #       #      ######      #  #  #  # # # # # #  x#  #  ### # x      ##       #                                       #####      #    #      #       #  #       #          ##      #  #  ## ##  ##   #   ###   ##x#           #       #                                       #####      #    #   LLL#x#x#x#x#  #x#x#x#x#          ##      #  #  #  # # # #  # # ###   #        # x    #x                                             #####ll    #    #   L  #########  #########      c   ##      #  #  ## # # # #  # # # ##      ###  # ##    ##                                                  l    #    #   L                     #      ##  ##      #                     x  ##   #  #   ### x x  ##x                                                l c  #    #  =L                     #xxxxxx##  ##xxxxxx################   #        x##     x#############                                         ############    ################  ####### #########  #########   xxxx           #        ##     ###                                                     ############    ########----------------- #xxxx#             #                  # ##  x###  #x ##                                                       ########   #    #   ####                  #    #             #        c         ################                                                        ########   x    x   ####                  #    ###########   #     ##############              #                                                        ########            #### -----  --  ---   #    xxxxxxxxxxx   #                                 #                                                        ########            ####                  #    - - - - - -   #                      #          #                  #######                               ########            ####     xxxxxxxxxx c #    - - - - - -   #                      #          #              ############             ####             ########            ####---  ##############    - - - - - -   #                      #          #        c  ################           ######            ########   #----#   ####     xxxxxxxxxx c #    - - - - - -   #           ############          ##############################      ############   c     ########            ####                  #    - - - - - -   #           #          #            #############################    ##############################            #### -------  -----   #    - - - - - -   #           ##         #####        ##############################  ###############################          c ####                       - - - - - -   #            #             #        ##############################  ###################################    ########                       xxxxxxxxxxx c ";
+const paletteData = "jjojjjjjjjjjjjjjjjjjjooojjjjkkkcjjjphjjjooooojjkkkkccjphhhjjppoojjjkakkacjjjjjjjhhpjjjjkkkcccjjjjjjjjjjjjkjkaaaacjkjjjjjjjjjjjkjkaacjcjjjjjjjjjjjjjckccccjjjjjjjbbbbbbbbkkccbbbbbbbbbbbbbbbbkkccbbbbbbbbggggbbggkcccgggbbbbbggggggggcggcgggggggggggggggkggggkgggggggggggggkggggggkgggggggggggggggggggggggggg";
+let map = levelData.split('');
+const palette = paletteData.split('');
+let visited = new Array(10000).fill(0);
+let playerX = 0.0;
+let playerY = 0.0;
+let velX = 0.0;
+let velY = 0.0;
+let levelWidth = 152;
+let levelHeight = 104;
+let camX = 0;
+let camY = 0;
+let camTargetX = 0;
+let camTargetY = 0;
+let direction = 1;
+let moveDirection = 1;
+let animationTimer = 0;
+let winCount = 0;
+let time = 0;
+let deathCount = 0;
+let isPaused = false;
+let checkpointX = -1;
+let checkpointY = -1;
+let checkpointDir = 1;
+let checkpointMoveDir = 1;
+let checkpointCamX = 0;
+let checkpointCamY = 0;
+let lastCheckpointIndex = -1;
+let flashTimer = 0;
+let titleScreenTimer = 0;
+let showingTitle = true;
+let keys = {};
+const playerSprites = [
+  "  ####   ## # #  ######  ## # #   ## #    ####   # ## #  # ## #    ##     #  #    #  #            ####   ## # #  ######  ## # #   ## #    ####   # ## # #  ##  #  #  #   #    #   ####   ## # #  ######  ### ##   # # #   ####   # ## #  # ## #    ##     #  #    #  #  ".split(''),
+  "####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #  ####      #      #......".split(''),
+  "  ####   ## # #  ######  ## # #   ## #    ####   # ## #  # ## #    ##     #  #    #  #            ####   ## # #  ######  ## # #   ## #    ####   # ## # #  ##  #  #  #   #    #   ####   ## # #  ######  ### ##   # # #   ####   # ## #  # ## #    ##     #  #    #  #  ".split('')
+];
+const offscreenCanvas = document.createElement('canvas');
+offscreenCanvas.width = 160;
+offscreenCanvas.height = 120;
+const offscreenCtx = offscreenCanvas.getContext('2d');
+const imageData = offscreenCtx.createImageData(160, 120);
+const buffer = new Uint32Array(imageData.data.buffer);
+
+function getIndex(x, y) {
+  return x + y * levelWidth;
+}
+
+function getTile(x, y) {
+  if (x < 0 || x >= levelWidth || y < 0 || y >= levelHeight) return ' ';
+  return map[getIndex(x, y)];
+}
+
+function setTile(x, y, tile) {
+  if (x < 0 || x >= levelWidth || y < 0 || y >= levelHeight) return;
+  map[getIndex(x, y)] = tile;
+}
+
+function isSolid(tile) {
+  return tile !== ' ';
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function updateCamera() {
+  camX = lerp(camX, camTargetX, 0.1);
+  camY = lerp(camY, camTargetY, 0.1);
+}
+
+function drawText(text, x, y, color = '#FFFFFF') {
+  offscreenCtx.fillStyle = color;
+  offscreenCtx.font = '10px monospace';
+  offscreenCtx.fillText(text, x, y);
+}
+
+function flipGravity() {
+  velY = -velY;
+  direction = -direction;
+}
+
+function resetPlayer() {
+  for (let i = 0; i < map.length; i++) {
+    if (map[i] === 'c') {
+      playerX = (i % levelWidth) * 8 + 4;
+      playerY = Math.floor(i / levelWidth) * 8 + 4;
+      camTargetX = playerX - 80;
+      camTargetY = playerY - 60;
+      camX = camTargetX;
+      camY = camTargetY;
+      velX = 0;
+      velY = 0;
+      direction = 1;
+      moveDirection = 1;
+      break;
+    }
+  }
+}
+
+function gameLoop() {
+  if (showingTitle) {
+    titleScreenTimer++;
+    if (keys[' '] || keys['Enter']) {
+      showingTitle = false;
+      resetPlayer();
+    }
+    offscreenCtx.fillStyle = '#000000';
+    offscreenCtx.fillRect(0, 0, 160, 120);
+    offscreenCtx.fillStyle = '#FFFFFF';
+    offscreenCtx.font = '20px monospace';
+    offscreenCtx.textAlign = 'center';
+    offscreenCtx.fillText('VVVVVV 4K', 80, 50);
+    offscreenCtx.font = '10px monospace';
+    if (Math.floor(titleScreenTimer / 30) % 2 === 0) {
+      offscreenCtx.fillText('PRESS START', 80, 80);
+    }
+    offscreenCtx.textAlign = 'left';
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(offscreenCanvas, 0, 0, 640, 480);
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  if (!isPaused) {
+    time++;
+    animationTimer++;
+
+    if (keys['ArrowLeft'] || keys['a']) {
+      velX = -0.25;
+      moveDirection = -1;
+    }
+    if (keys['ArrowRight'] || keys['d']) {
+      velX = 0.25;
+      moveDirection = 1;
+    }
+
+    if (keys['ArrowUp'] || keys['w'] || keys['ArrowDown'] || keys['s'] || keys[' ']) {
+      flipGravity();
+      keys['ArrowUp'] = keys['w'] = keys['ArrowDown'] = keys['s'] = keys[' '] = false;
+    }
+
+    velY += direction * 0.05;
+
+    let newX = playerX + velX;
+    let newY = playerY + velY;
+
+    let gridX = Math.floor(newX / 8);
+    let gridY = Math.floor(playerY / 8);
+
+    for (let y = Math.max(0, gridY - 1); y <= Math.min(levelHeight - 1, gridY + 1); y++) {
+      for (let x = Math.max(0, gridX - 1); x <= Math.min(levelWidth - 1, gridX + 1); x++) {
+        if (isSolid(getTile(x, y))) {
+          let tileLeft = x * 8;
+          let tileRight = tileLeft + 8;
+          let tileTop = y * 8;
+          let tileBottom = tileTop + 8;
+
+          if (newX + 2 > tileLeft && newX - 2 < tileRight &&
+              playerY + 4 > tileTop && playerY - 4 < tileBottom) {
+            if (velX > 0) newX = tileLeft - 2;
+            if (velX < 0) newX = tileRight + 2;
+            velX = 0;
+          }
+        }
+      }
+    }
+
+    gridX = Math.floor(newX / 8);
+    let newGridY = Math.floor(newY / 8);
+
+    let onGround = false;
+    for (let y = Math.max(0, newGridY - 1); y <= Math.min(levelHeight - 1, newGridY + 1); y++) {
+      for (let x = Math.max(0, gridX - 1); x <= Math.min(levelWidth - 1, gridX + 1); x++) {
+        let tile = getTile(x, y);
+        if (isSolid(tile)) {
+          let tileLeft = x * 8;
+          let tileRight = tileLeft + 8;
+          let tileTop = y * 8;
+          let tileBottom = tileTop + 8;
+
+          if (newX + 2 > tileLeft && newX - 2 < tileRight &&
+              newY + 4 > tileTop && newY - 4 < tileBottom) {
+            if ((velY > 0 && direction > 0) || (velY < 0 && direction < 0)) {
+              if (direction > 0) {
+                newY = tileTop - 4;
+              } else {
+                newY = tileBottom + 4;
+              }
+              velY = 0;
+              onGround = true;
+            }
+          }
+        }
+
+        if (tile === '=') {
+          winCount++;
+          setTile(x, y, ' ');
+        }
+
+        if (tile === 'c') {
+          checkpointX = x;
+          checkpointY = y;
+          checkpointDir = direction;
+          checkpointMoveDir = moveDirection;
+          checkpointCamX = camTargetX;
+          checkpointCamY = camTargetY;
+          lastCheckpointIndex = getIndex(x, y);
+          for (let i = 0; i < map.length; i++) {
+            if (map[i] === 'C') map[i] = 'c';
+          }
+          setTile(x, y, 'C');
+        }
+
+        if (tile === 'x' && flashTimer <= 0) {
+          flashTimer = 50;
+        }
+      }
+    }
+
+    playerX = newX;
+    playerY = newY;
+
+    if (playerX < 0) playerX += levelWidth * 8;
+    if (playerY < 0) playerY += levelHeight * 8;
+    if (playerX >= levelWidth * 8) playerX -= levelWidth * 8;
+    if (playerY >= levelHeight * 8) playerY -= levelHeight * 8;
+
+    camTargetX = playerX - 80;
+    camTargetY = playerY - 60;
+
+    velX *= 0.8;
+    if (Math.abs(velX) < 0.01) velX = 0;
+
+    updateCamera();
+
+    if (flashTimer > 0) {
+      flashTimer--;
+      if (flashTimer === 0) {
+        deathCount++;
+        resetPlayer();
+      }
+    }
+  }
+
+  statsDiv.textContent = `V: ${winCount} | D: ${deathCount} | T: ${Math.floor(time / 60)}`;
+
+  buffer.fill(0xFF000000);
+
+  for (let y = 0; y < 120; y++) {
+    for (let x = 0; x < 160; x++) {
+      let wx = Math.floor((x + camX) / 8);
+      let wy = Math.floor((y + camY) / 8);
+
+      if (wx < 0 || wx >= levelWidth || wy < 0 || wy >= levelHeight) continue;
+
+      let tile = getTile(wx, wy);
+      let idx = getIndex(wx, wy);
+      let paletteIdx = palette[Math.floor(wx/8) + Math.floor(wy/8) * 20].charCodeAt(0) - 97;
+      let r = ((paletteIdx & 4) << 5) + ((paletteIdx & 8) << 3) + 32;
+      let g = ((paletteIdx & 2) << 6) + ((paletteIdx & 8) << 3) + 32;
+      let b = ((paletteIdx & 1) << 7) + ((paletteIdx & 8) << 3) + 32;
+
+      if (tile === '#') {
+        let localX = (x + Math.floor(camX)) % 8;
+        let localY = (y + Math.floor(camY)) % 8;
+        let shade = 1.0;
+        if (localX === 0 || localY === 0) shade = 0.7;
+        if (localX === 7 || localY === 7) shade = 1.3;
+        let sr = Math.min(255, Math.max(0, Math.floor(r * shade)));
+        let sg = Math.min(255, Math.max(0, Math.floor(g * shade)));
+        let sb = Math.min(255, Math.max(0, Math.floor(b * shade)));
+        buffer[x + y * 160] = 0xFF000000 | (sr << 16) | (sg << 8) | sb;
+      } else if (tile >= '1' && tile <= '9') {
+        if (((x * 4311 + y * 3) & 7) < (tile.charCodeAt(0) - 48)) {
+          buffer[x + y * 160] = 0xFF000000 | (r << 16) | (g << 8) | b;
+        }
+      } else if (tile === '=') {
+        buffer[x + y * 160] = 0xFFFF0000;
+      } else if (tile === '-' || tile === 'L' || tile === 'l') {
+        let lx = x + Math.floor(camX);
+        let ly = y + Math.floor(camY);
+        let localX = lx % 8;
+        let localY = ly % 8;
+        if (tile === '-') {
+          if ((getTile(wx-1, wy) !== '-' && getTile(wx+1, wy) !== '-') ? localX === 3 : localY === 3) {
+            buffer[x + y * 160] = 0xFF808080;
+          }
+        } else {
+          buffer[x + y * 160] = 0xFF00FF00;
+        }
+      } else if (tile === 'c' || tile === 'C') {
+        let localX = (x + Math.floor(camX)) % 8 - 4;
+        let localY = (y + Math.floor(camY)) % 8 - 4;
+        if ((localX * localX * 2) + (localY * localY) < 10) {
+          buffer[x + y * 160] = tile === 'C' ? 0xFFFFFF00 : 0xFF808000;
+        }
+      } else if (tile === 'x') {
+        let localX = (x + Math.floor(camX)) % 8;
+        let localY = (y + Math.floor(camY)) % 8;
+        if (localX >= 2 && localX <= 5 && localY >= 1 && localY <= 5) {
+          buffer[x + y * 160] = 0xFF00FF00;
+        }
+      }
+    }
+  }
+
+  let playerGridX = Math.floor(playerX / 8);
+  let playerGridY = Math.floor(playerY / 8);
+  let spriteIdx = Math.floor(animationTimer / 10) % playerSprites.length;
+  let sprite = playerSprites[spriteIdx];
+
+  for (let y = 0; y < 11; y++) {
+    for (let x = 0; x < 8; x++) {
+      let px = Math.floor(playerX) + (moveDirection > 0 ? x : 7 - x) - 4 - Math.floor(camX);
+      let py = Math.floor(playerY) + (direction > 0 ? y : 10 - y) - 5 - Math.floor(camY);
+
+      if (px >= 0 && px < 160 && py >= 0 && py < 120) {
+        if (sprite[x + y * 8] === '#') {
+          if (flashTimer > 0 && Math.floor(flashTimer / 5) % 2 === 0) {
+            buffer[px + py * 160] = 0xFFFF0000;
+          } else {
+            let localX = x % 8;
+            let localY = y % 11;
+            let pr = 255, pg = 255, pb = 255;
+            let shade = 1.0;
+            if (localX === 0 || localY === 0) shade = 0.8;
+            if (localX === 7 || localY === 10) shade = 1.2;
+            pr = Math.min(255, Math.max(0, Math.floor(pr * shade)));
+            pg = Math.min(255, Math.max(0, Math.floor(pg * shade)));
+            pb = Math.min(255, Math.max(0, Math.floor(pb * shade)));
+            buffer[px + py * 160] = 0xFF000000 | (pr << 16) | (pg << 8) | pb;
+          }
+        }
+      }
+    }
+  }
+
+  offscreenCtx.putImageData(imageData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(offscreenCanvas, 0, 0, 640, 480);
+
+  requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('keydown', (e) => {
+  keys[e.key] = true;
+  if (e.key === 'p') isPaused = !isPaused;
+  if (e.key === 'r') resetPlayer();
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.key !== 'ArrowUp' && e.key !== 'w' && e.key !== 'ArrowDown' && e.key !== 's' && e.key !== ' ') {
+    keys[e.key] = false;
+  }
+});
+
+gameLoop();
+</script>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minecraft4k</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #000 url('Res/BackGround.png') repeat; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+        #gameContainer {
+            position: relative;
+        }
+        canvas { 
+            display: block; 
+            margin: 0 auto; 
+            cursor: default;
+        }
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="loadingScreen">
+            <img src="Res/Screen.png" style="max-width:100%; max-height:100%;">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const loadingScreen = document.getElementById('loadingScreen');
+            canvas.width = 856;
+            canvas.height = 480;
+
+            let gameStarted = false;
+
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                gameStarted = true;
+                initGame();
+            }, 4000);
+
+            function initGame() {
+                const M = new Array(32767).fill(0);
+                const random = new Random(18295169);
+                const world = new Array(262144).fill(0);
+                const colors = new Array(12288).fill(0);
+
+                function Random(seed) {
+                    this.seed = seed;
+                    this.nextInt = function(bound) {
+                        this.seed = (this.seed * 1664525 + 1013904223) & 0xFFFFFFFF;
+                        return (this.seed >>> 16) % bound;
+                    };
+                }
+
+                for (let i = 0; i < 262144; i++) {
+                    world[i] = Math.floor(i / 64) % 64 > 32 + random.nextInt(8) ? random.nextInt(8) + 1 : 0;
+                }
+
+                for (let type = 1; type < 16; type++) {
+                    let brightness = 255 - random.nextInt(96);
+                    
+                    for (let y = 0; y < 48; y++) {
+                        for (let x = 0; x < 16; x++) {
+                            let color = 9858122;
+                            if (type === 4) color = 8355711;
+                            
+                            if (type !== 4 || random.nextInt(3) === 0) {
+                                brightness = 255 - random.nextInt(96);
+                            }
+                            
+                            if (type === 1 && y < ((x * x * 3 + x * 81) >> 2 & 3) + 18) {
+                                color = 6990400;
+                            } else if (type === 1 && y < ((x * x * 3 + x * 81) >> 2 & 3) + 19) {
+                                brightness = brightness * 2 / 3;
+                            }
+                            
+                            if (type === 7) {
+                                color = 6771249;
+                                if (x <= 0 || x >= 15 || (y <= 0 || y >= 15) && (y <= 32 || y >= 47)) {
+                                    if (random.nextInt(2) === 0) {
+                                        brightness = brightness * (150 - (x & 1) * 100) / 100;
+                                    }
+                                } else {
+                                    color = 12359778;
+                                    let dx = x - 7;
+                                    let dy = (y & 15) - 7;
+                                    if (dx < 0) dx = 1 - dx;
+                                    if (dy < 0) dy = 1 - dy;
+                                    if (dy > dx) dx = dy;
+                                    brightness = 196 - random.nextInt(32) + dx % 3 * 32;
+                                }
+                            }
+                            
+                            if (type === 5) {
+                                color = 11876885;
+                                if ((x + Math.floor(y / 4) * 4) % 8 === 0 || y % 4 === 0) {
+                                    color = 12365733;
+                                }
+                            }
+                            
+                            let finalBrightness = brightness;
+                            if (y >= 32) finalBrightness = brightness / 2;
+                            
+                            if (type === 8) {
+                                color = 5298487;
+                                if (random.nextInt(2) === 0) {
+                                    color = 0;
+                                    finalBrightness = 255;
+                                }
+                            }
+                            
+                            const finalColor = ((color >> 16 & 255) * finalBrightness / 255 << 16) | 
+                                            ((color >> 8 & 255) * finalBrightness / 255 << 8) | 
+                                            ((color & 255) * finalBrightness / 255);
+                            colors[x + y * 16 + type * 256 * 3] = finalColor;
+                        }
+                    }
+                }
+
+                let px = 96.5, py = 70.0, pz = 96.5;
+                let vx = 0, vy = 0, vz = 0;
+                let lastTime = Date.now();
+                let selectedBlock = -1;
+                let selectedSide = 0;
+                let rotX = 0, rotY = 0;
+                let hoveredBlock = -1;
+                const moveSpeed = 0.02;
+                const jumpForce = 0.08;
+                let isOnGround = false;
+                const maxPitch = Math.PI / 2 - 0.01;
+
+                function clampPosition() {
+                    px = Math.max(64.3, Math.min(127.7, px));
+                    py = Math.max(64.3, Math.min(127.7, py));
+                    pz = Math.max(64.3, Math.min(127.7, pz));
+                }
+
+                function checkCollision(x, y, z) {
+                    for (let j = 0; j < 12; j++) {
+                        const bx = Math.floor(x + (j & 1) * 0.6 - 0.3) - 64;
+                        const by = Math.floor(y + ((j >> 2) - 1) * 0.8 + 0.65) - 64;
+                        const bz = Math.floor(z + (j >> 1 & 1) * 0.6 - 0.3) - 64;
+                        
+                        if (bx < 0 || by < 0 || bz < 0 || bx >= 64 || by >= 64 || bz >= 64 || world[bx + by * 64 + bz * 4096] > 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                function update() {
+                    if (!gameStarted) return;
+                    
+                    const currentTime = Date.now();
+                    const deltaTime = Math.min(50, currentTime - lastTime);
+                    lastTime = currentTime;
+                    
+                    const sinX = Math.sin(rotX), cosX = Math.cos(rotX);
+                    const sinY = Math.sin(rotY), cosY = Math.cos(rotY);
+                    
+                    if (M[2] > 0) {
+                        const mx = (M[2] - canvas.width/2) / 100;
+                        const my = (M[3] - canvas.height/2) / 100;
+                        
+                        rotX = mx;
+                        rotY = Math.max(-maxPitch, Math.min(maxPitch, -my));
+                    }
+                    
+                    let moveForward = 0, moveStrafe = 0;
+                    
+                    if (M[87] || M[38]) moveForward += moveSpeed;
+                    if (M[83] || M[40]) moveForward -= moveSpeed;
+                    if (M[65] || M[37]) moveStrafe -= moveSpeed;
+                    if (M[68] || M[39]) moveStrafe += moveSpeed;
+                    
+                    if ((M[32] || M[82]) && isOnGround) {
+                        vy = -jumpForce;
+                        isOnGround = false;
+                    }
+                    
+                    vx *= 0.7;
+                    vz *= 0.7;
+                    vy += 0.0015;
+                    
+                    vx += sinX * moveForward + cosX * moveStrafe;
+                    vz += cosX * moveForward - sinX * moveStrafe;
+                    
+                    isOnGround = false;
+                    
+                    let newX = px + vx * deltaTime * 0.1;
+                    if (!checkCollision(newX, py, pz)) {
+                        px = newX;
+                    } else {
+                        vx = 0;
+                    }
+                    
+                    let newY = py + vy * deltaTime * 0.1;
+                    if (!checkCollision(px, newY, pz)) {
+                        py = newY;
+                    } else {
+                        if (vy > 0) isOnGround = true;
+                        vy = 0;
+                    }
+                    
+                    let newZ = pz + vz * deltaTime * 0.1;
+                    if (!checkCollision(px, py, newZ)) {
+                        pz = newZ;
+                    } else {
+                        vz = 0;
+                    }
+                    
+                    clampPosition();
+                    
+                    if (M[1] > 0 && selectedBlock > 0) {
+                        const bx = selectedBlock % 64;
+                        const by = Math.floor(selectedBlock / 64) % 64;
+                        const bz = Math.floor(selectedBlock / 4096);
+                        
+                        if (by >= 0 && world[selectedBlock] > 0) {
+                            world[selectedBlock] = 0;
+                        }
+                        M[1] = 0;
+                    }
+                    
+                    if (M[0] > 0 && selectedBlock > 0) {
+                        const targetBlock = selectedBlock + selectedSide;
+                        const bx = targetBlock % 64;
+                        const by = Math.floor(targetBlock / 64) % 64;
+                        const bz = Math.floor(targetBlock / 4096);
+                        const playerX = Math.floor(px) - 64;
+                        const playerY = Math.floor(py) - 64;
+                        const playerZ = Math.floor(pz) - 64;
+                        
+                        if (bx >= 0 && by >= 0 && bz >= 0 && bx < 64 && by < 64 && bz < 64) {
+                            const distX = Math.abs(bx - playerX);
+                            const distY = Math.abs(by - playerY);
+                            const distZ = Math.abs(bz - playerZ);
+                            
+                            if (distX <= 2 && distY <= 3 && distZ <= 2 && 
+                                !(distX === 0 && distY === 0 && distZ === 0)) {
+                                world[targetBlock] = 1;
+                            }
+                        }
+                        M[0] = 0;
+                    }
+                    
+                    selectedBlock = -1;
+                    hoveredBlock = -1;
+                    const imageData = ctx.createImageData(214, 120);
+                    
+                    for (let x = 0; x < 214; x++) {
+                        const mx = (x - 107) / 90;
+                        
+                        for (let y = 0; y < 120; y++) {
+                            const my = (y - 60) / 90;
+                            let depth = 1;
+                            let mz = depth * cosY + my * sinY;
+                            let mw = my * cosY - depth * sinY;
+                            let rx = mx * cosX + mz * sinX;
+                            let rz = mz * cosX - mx * sinX;
+                            let pixelColor = 0;
+                            let pixelBrightness = 255;
+                            let maxDist = 20;
+                            let selectDist = 5;
+                            
+                            for (let axis = 0; axis < 3; axis++) {
+                                let dir = rx;
+                                if (axis === 1) dir = mw;
+                                if (axis === 2) dir = rz;
+                                
+                                const invDir = 1 / (dir < 0 ? -dir : dir);
+                                const stepX = rx * invDir;
+                                const stepY = mw * invDir;
+                                const stepZ = rz * invDir;
+                                let dist = px - Math.floor(px);
+                                if (axis === 1) dist = py - Math.floor(py);
+                                if (axis === 2) dist = pz - Math.floor(pz);
+                                if (dir > 0) dist = 1 - dist;
+                                
+                                let rayDist = invDir * dist;
+                                let rayX = px + stepX * dist;
+                                let rayY = py + stepY * dist;
+                                let rayZ = pz + stepZ * dist;
+                                
+                                if (dir < 0) {
+                                    if (axis === 0) rayX--;
+                                    if (axis === 1) rayY--;
+                                    if (axis === 2) rayZ--;
+                                }
+                                
+                                while (rayDist < maxDist) {
+                                    const bx = Math.floor(rayX) - 64;
+                                    const by = Math.floor(rayY) - 64;
+                                    const bz = Math.floor(rayZ) - 64;
+                                    
+                                    if (bx < 0 || by < 0 || bz < 0 || bx >= 64 || by >= 64 || bz >= 64) break;
+                                    
+                                    const blockIndex = bx + by * 64 + bz * 4096;
+                                    const blockType = world[blockIndex];
+                                    
+                                    if (blockType > 0) {
+                                        let tx = Math.floor((rayX + rayZ) * 16) & 15;
+                                        let ty = (Math.floor(rayY * 16) & 15) + 16;
+                                        
+                                        if (axis === 1) {
+                                            tx = Math.floor(rayX * 16) & 15;
+                                            ty = Math.floor(rayZ * 16) & 15;
+                                            if (stepY < 0) ty += 32;
+                                        }
+                                        
+                                        let blockColor = colors[tx + ty * 16 + blockType * 256 * 3];
+                                        
+                                        if (x === Math.floor(M[2] / 4) && y === Math.floor(M[3] / 4)) {
+                                            hoveredBlock = blockIndex;
+                                            
+                                            if (rayDist < selectDist) {
+                                                selectedBlock = blockIndex;
+                                                let side = 1;
+                                                if (dir > 0) side = -1;
+                                                selectedSide = side << 6 * axis;
+                                                selectDist = rayDist;
+                                            }
+                                        }
+                                        
+                                        if (blockColor > 0) {
+                                            pixelColor = blockColor;
+                                            pixelBrightness = 255 - rayDist / 20 * 255;
+                                            pixelBrightness = pixelBrightness * (255 - (axis + 2) % 3 * 50) / 255;
+                                            maxDist = rayDist;
+                                        }
+                                    }
+                                    
+                                    rayX += stepX;
+                                    rayY += stepY;
+                                    rayZ += stepZ;
+                                    rayDist += invDir;
+                                }
+                            }
+                            
+                            const r = (pixelColor >> 16 & 255) * pixelBrightness / 255;
+                            const g = (pixelColor >> 8 & 255) * pixelBrightness / 255;
+                            const b = (pixelColor & 255) * pixelBrightness / 255;
+                            const index = (x + y * 214) * 4;
+                            imageData.data[index] = r;
+                            imageData.data[index + 1] = g;
+                            imageData.data[index + 2] = b;
+                            imageData.data[index + 3] = 255;
+                        }
+                    }
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(canvas, 0, 0, 214, 120, 0, 0, 856, 480);
+                    
+                    requestAnimationFrame(update);
+                }
+
+                canvas.addEventListener('mousemove', function(e) {
+                    if (!gameStarted) return;
+                    const rect = canvas.getBoundingClientRect();
+                    M[2] = e.clientX - rect.left;
+                    M[3] = e.clientY - rect.top;
+                });
+
+                canvas.addEventListener('mousedown', function(e) {
+                    if (!gameStarted) return;
+                    if (e.button === 2) {
+                        M[1] = 1;
+                    } else {
+                        M[0] = 1;
+                    }
+                    const rect = canvas.getBoundingClientRect();
+                    M[2] = e.clientX - rect.left;
+                    M[3] = e.clientY - rect.top;
+                });
+
+                canvas.addEventListener('mouseup', function() {
+                    if (!gameStarted) return;
+                    M[0] = M[1] = 0;
+                });
+
+                canvas.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (!gameStarted) return;
+                    if ([87, 65, 83, 68, 38, 37, 40, 39, 32, 82].includes(e.keyCode)) {
+                        M[e.keyCode] = 1;
+                    }
+                });
+
+                document.addEventListener('keyup', function(e) {
+                    if (!gameStarted) return;
+                    if ([87, 65, 83, 68, 38, 37, 40, 39, 32, 82].includes(e.keyCode)) {
+                        M[e.keyCode] = 0;
+                    }
+                });
+
+                px = 96.5;
+                py = 70.0;
+                pz = 96.5;
+                
+                update();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-image: url('res/BackGround.png');
+            background-repeat: repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="640" height="480"></canvas>
+    <img id="miscTexture" src="res/misc.gif" class="hidden">
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(640, 480);
+        const data = imageData.data;
+
+        const keys = { left: false, right: false, up: false };
+        document.addEventListener('keydown', (e) => {
+            if (e.keyCode === 37) keys.left = true;
+            if (e.keyCode === 39) keys.right = true;
+            if (e.keyCode === 38) keys.up = true;
+            if (e.keyCode === 27 || e.keyCode === 81) window.close();
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.keyCode === 37) keys.left = false;
+            if (e.keyCode === 39) keys.right = false;
+            if (e.keyCode === 38) keys.up = false;
+        });
+
+        const miscTextureImg = document.getElementById('miscTexture');
+        let miscTexture = new Array(128 * 32);
+
+        function initTextures() {
+            return new Promise((resolve) => {
+                const miscCanvas = document.createElement('canvas');
+                miscCanvas.width = 128;
+                miscCanvas.height = 32;
+                const miscCtx = miscCanvas.getContext('2d');
+                miscCtx.drawImage(miscTextureImg, 0, 0);
+                const miscData = miscCtx.getImageData(0, 0, 128, 32).data;
+                for (let i = 0; i < 128 * 32; i++) {
+                    const r = miscData[i * 4];
+                    const g = miscData[i * 4 + 1];
+                    const b = miscData[i * 4 + 2];
+                    const a = miscData[i * 4 + 3];
+                    miscTexture[i] = (a << 24) | (r << 16) | (g << 8) | b;
+                }
+                resolve();
+            });
+        }
+
+        let wallTexture = new Array(32 * 32);
+        for (let i = 0; i < 32 * 32; i++) {
+            wallTexture[i] = 0xFF0000FF;
+        }
+
+        const worldSize = 2048;
+        let worldMap = new Array(worldSize * worldSize).fill(0);
+        let worldColors = new Array(worldSize * worldSize);
+
+        function initWorld() {
+            const seed = 3477;
+            let random = mulberry32(seed);
+
+            for (let i = 0; i < worldSize * worldSize; i++) {
+                const r = Math.floor(random() * 32);
+                const g = Math.floor(random() * 128) + 64;
+                const b = Math.floor(random() * 32);
+                worldColors[i] = (255 << 24) | (r << 16) | (g << 8) | b;
+            }
+
+            let posX = 0, posY = 0;
+            let dir = -Math.PI / 2;
+            let dirChange = 0;
+            let speed = 4.0;
+            let speedChange = 0;
+
+            for (let t = 0; t < 7000; t++) {
+                posX += Math.sin(dir) * 1.0;
+                posY += Math.cos(dir) * 1.0;
+                dir += dirChange;
+                dirChange = 0.8 * (dirChange + (randomGaussian(random) * random() * random() * random() * 0.09));
+                speed += speedChange;
+                speedChange = 0.96 * (speedChange + (randomGaussian(random) * random() * 0.5));
+                speed = speed * 0.8 + 6.4;
+                if (speed < 8.0) speed = 8.0;
+
+                const intX = Math.floor(posX);
+                const intY = Math.floor(posY);
+                const radius = Math.floor(speed);
+
+                for (let dx = -radius / 2; dx < (radius + 1) / 2; dx++) {
+                    for (let dy = -radius / 2; dy < (radius + 1) / 2; dy++) {
+                        const wx = (intX + dx) & (worldSize - 1);
+                        const wy = (intY + dy) & (worldSize - 1);
+                        const index = wx + wy * worldSize;
+                        const intensity = Math.floor(random() * 8) + 64;
+                        if (worldMap[index] === 0) {
+                            const color = (255 << 24) | (intensity << 16) | (intensity << 8) | intensity;
+                            worldColors[index] = color;
+                            worldMap[index] = t + 1;
+                        } else if (worldMap[index] < t - 100) {
+                            worldMap[index] = -1;
+                        }
+                    }
+                }
+
+                if ((Math.floor(t / 4) & 1) === 0) {
+                    const wx = Math.floor(posX) & (worldSize - 1);
+                    const wy = Math.floor(posY) & (worldSize - 1);
+                    const index = wx + wy * worldSize;
+                    worldColors[index] = 0xFFFFFFFF;
+                }
+            }
+        }
+
+        let posX = 1000, posY = 1000;
+        let dir = 0;
+        let dirChange = 0;
+        let speed = 0;
+        let velX = 0, velY = 0;
+        let animationTime = 0;
+        let lastTimestamp = 0;
+        let score = 0;
+        let scoreTimer = 0;
+        let gameOver = false;
+        let highestInk = 1;
+        let inInk = false;
+
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            dir += dirChange;
+            posX += velX;
+            posY += velY;
+            dirChange *= 0.85;
+            velX *= 0.975;
+            velY *= 0.975;
+            
+            if (!gameOver) {
+                if (keys.left) dirChange -= 0.005;
+                if (keys.right) dirChange += 0.005;
+                if (keys.up) {
+                    speed += 0.1;
+                    scoreTimer += deltaTime / 10;
+                    score = Math.floor(scoreTimer);
+                }
+            } else {
+                speed *= 0.5;
+            }
+            
+            speed *= 0.99 * (1.0 - Math.abs(dirChange) * 0.125);
+            const moveSpeed = speed * 0.01;
+            dirChange += moveSpeed * 0.001;
+            velX -= Math.cos(dir) * speed * 0.004;
+            velY += Math.sin(dir) * speed * 0.004;
+
+            const checkX = Math.floor(posX) & (worldSize - 1);
+            const checkY = Math.floor(posY) & (worldSize - 1);
+            const checkIndex = checkX + checkY * worldSize;
+            const inkValue = worldMap[checkIndex];
+
+            if (inkValue <= 6960 && !gameOver) {
+                if (inkValue === 0) {
+                    speed *= 0.98;
+                    velX *= 0.98;
+                    velY *= 0.98;
+                    inInk = true;
+                } else if (inkValue > 0) {
+                    if (inkValue > highestInk) {
+                        if (inkValue - highestInk < 200) {
+                            highestInk = inkValue;
+                            inInk = false;
+                        } else {
+                            inInk = true;
+                        }
+                    } else if (inkValue < highestInk && highestInk - inkValue > 100) {
+                        inInk = true;
+                        if (highestInk - inkValue < 200) {
+                            highestInk = inkValue;
+                        }
+                    }
+                }
+            } else {
+                gameOver = true;
+            }
+
+            render();
+            animationTime++;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function render() {
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = 0x10;
+                data[i + 1] = 0x10;
+                data[i + 2] = 0x20;
+                data[i + 3] = 0xFF;
+            }
+
+            const sinDir = Math.sin(dir);
+            const cosDir = Math.cos(dir);
+
+            for (let y = 120; y < 480; y++) {
+                const z = (400.0 / (y - 120.0)) - 3.2;
+                const distFactor = z * 32;
+
+                let rayX1 = sinDir * (-320.0 / (y - 120.0) * 32) - cosDir * distFactor + posX;
+                let rayY1 = sinDir * distFactor + cosDir * (-320.0 / (y - 120.0) * 32) + posY;
+                let rayX2 = sinDir * (320.0 / (y - 120.0) * 32) - cosDir * distFactor + posX;
+                let rayY2 = sinDir * distFactor + cosDir * (320.0 / (y - 120.0) * 32) + posY;
+
+                const stepX = (rayX2 - rayX1) / 640.0;
+                const stepY = (rayY2 - rayY1) / 640.0;
+
+                for (let x = 0; x < 640; x++) {
+                    const wx = Math.floor(rayX1) & (worldSize - 1);
+                    const wy = Math.floor(rayY1) & (worldSize - 1);
+                    const color = worldColors[wx + wy * worldSize];
+                    const idx = (x + y * 640) * 4;
+                    data[idx] = (color >> 16) & 0xFF;
+                    data[idx + 1] = (color >> 8) & 0xFF;
+                    data[idx + 2] = color & 0xFF;
+                    data[idx + 3] = 0xFF;
+                    rayX1 += stepX;
+                    rayY1 += stepY;
+                }
+            }
+
+            drawSprite();
+            drawScore();
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function drawSprite() {
+            const shipX1 = 256, shipY1 = 264;
+            const shipX2 = 288, shipY2 = 296;
+            
+            for (let x = shipX1; x < shipX2; x++) {
+                for (let y = shipY1; y < shipY2; y++) {
+                    if (x >= 0 && x < 640 && y >= 0 && y < 480) {
+                        const idx = (x + y * 640) * 4;
+                        data[idx] = 0x00;
+                        data[idx + 1] = 0x00;
+                        data[idx + 2] = 0xFF;
+                        data[idx + 3] = 0xFF;
+                    }
+                }
+            }
+
+            if (inInk && !gameOver) {
+                const eyeSize = 128 + Math.floor(Math.sin(animationTime / 40.0) * 64.0);
+                const eyeX = 320 - eyeSize;
+                const eyeY = 120 - Math.floor(eyeSize / 8);
+                const eyeW = 320 + eyeSize;
+                const eyeH = 120 + Math.floor(eyeSize / 8);
+                drawTexture(miscTexture, eyeX, eyeY, eyeW, eyeH, 0, 0, 128, 16, 128);
+            }
+        }
+
+        function drawScore() {
+            const scale = gameOver ? 8 : 2;
+            let x = 640 - 20 * scale - 16;
+            let tempScore = score;
+            let digitCount = 0;
+
+            do {
+                const digit = tempScore % 10;
+                drawTexture(miscTexture, x, 16, x + 20 * scale, 16 + 32 * scale, digit * 10, 16, 10, 16, 128);
+                x -= 20 * scale;
+                tempScore = Math.floor(tempScore / 10);
+                digitCount++;
+                
+                if (digitCount === 1) {
+                    drawTexture(miscTexture, x + 12 * scale, 16, x + 32 * scale, 16 + 32 * scale, 100, 16, 10, 16, 128);
+                    x -= 8 * scale;
+                }
+            } while (tempScore > 0 || digitCount < 3);
+        }
+
+        function drawTexture(texture, x1, y1, x2, y2, tx, ty, tw, th, textureWidth) {
+            if (x1 > x2) { const tmp = x1; x1 = x2; x2 = tmp; }
+            if (y1 > y2) { const tmp = y1; y1 = y2; y2 = tmp; }
+
+            const width = x2 - x1;
+            const height = y2 - y1;
+
+            for (let x = x1; x < x2; x++) {
+                if (x < 0 || x >= 640) continue;
+                const texX = Math.floor(((x - x1) / width) * tw) + tx;
+
+                for (let y = y1; y < y2; y++) {
+                    if (y < 0 || y >= 480) continue;
+                    const texY = Math.floor(((y - y1) / height) * th) + ty;
+                    const texIndex = texX + texY * textureWidth;
+                    if (texIndex >= 0 && texIndex < texture.length) {
+                        const color = texture[texIndex];
+                        if (((color >> 24) & 0xFF) > 0) {
+                            const idx = (x + y * 640) * 4;
+                            data[idx] = (color >> 16) & 0xFF;
+                            data[idx + 1] = (color >> 8) & 0xFF;
+                            data[idx + 2] = color & 0xFF;
+                            data[idx + 3] = 0xFF;
+                        }
+                    }
+                }
+            }
+        }
+
+        function mulberry32(a) {
+            return function() {
+                a |= 0; a = a + 0x6D2B79F5 | 0;
+                var t = Math.imul(a ^ a >>> 15, 1 | a);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        function randomGaussian(randomFunc) {
+            var u = 0, v = 0;
+            while(u === 0) u = randomFunc();
+            while(v === 0) v = randomFunc();
+            return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+        }
+
+        initTextures().then(() => {
+            initWorld();
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
+</body>
+</html>

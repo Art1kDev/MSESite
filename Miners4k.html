@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Miners4k Port</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background-image: url('Res/BackGround.png');
+    background-repeat: repeat;
+    background-position: center;
+  }
+  #gameContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="640" height="480"></canvas>
+</div>
+<script>
+const WINDOW_CLOSING = 201;
+const MOUSE_CLICKED = 502;
+const KEY_PRESSED = 401;
+const KEY_RELEASED = 402;
+const MOUSE_PRESSED = 501;
+const MOUSE_MOVED = 503;
+const MOUSE_DRAGGED = 506;
+const keys = new Array(65536).fill(false);
+let xMouse = 0;
+let yMouse = 0;
+let mouseButton = 0;
+function processEvent(e) {
+    switch(e.type) {
+        case 'keydown':
+            keys[e.keyCode] = true;
+            break;
+        case 'keyup':
+            keys[e.keyCode] = false;
+            break;
+        case 'mousedown':
+            mouseButton = e.button + 1;
+            break;
+        case 'mouseup':
+            mouseButton = 0;
+            break;
+        case 'mousemove':
+            xMouse = e.offsetX;
+            yMouse = e.offsetY;
+            break;
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const img2Canvas = document.createElement('canvas');
+    img2Canvas.width = 640;
+    img2Canvas.height = 480;
+    const img2Ctx = img2Canvas.getContext('2d');
+    img2Ctx.fillStyle = 'white';
+    const SPRITES = " !!!!   !oooo  !oooo   **     **XX   o*XX   **     **     **     ooo    !     !!!!   !oooo   oooo   **XXX  *oXXX  ****  ** ** **   oooo       !!!   !oooo !!oooo   ** XX  ***oX  ** XX  ***   ***** o** ** o    oo !!!!  !!oooo  !oooo   **     **XXX  *oXXX  **    o***    o**      oo                !!!!   !oooo  !oooo   **     **XX   o*XX  #*# #   ###                                        #   #!!!! # !oooo  #o#o#  #####                                                            #   #     #";
+    const levelNames = ["Level 1: Miners4k", "Level 2: Rocks", "Level 3: Descent", "Level 4: Slime", "Level 5: Massive", "Level 6: Riiiight", "You won!"];
+    const infoStrings = ["Bring the gold home!", "Rocks are impenetrable.", "Use arrow keys to scroll.", "Slime explodes on contact!", "Wide level!", "Timekiller!", "Bonus level!"];
+    const slimes = [0, 0, 0, 6, 10, 25, 0];
+    let current_level = 0;
+    function gameLoop() {
+        if (keys[27]) {
+            console.log("Game exited via ESC.");
+            return;
+        }
+        const level_width = Math.floor(current_level / 4) * 384 + 640;
+        const level_height = current_level > 1 ? 1024 : 480;
+        let level_rocks = Math.floor((current_level - 1) / 2) * 100;
+        let level_target = current_level * 500;
+        let level_diggers = current_level * current_level * 50;
+        let level_goldLumps = current_level * current_level * 50;
+        if (current_level === 0) {
+            level_rocks = 0;
+            level_target = 100;
+            level_diggers = 50;
+            level_goldLumps = 10;
+        }
+        if (current_level === 1) {
+            level_rocks = 10;
+            level_target = 200;
+            level_goldLumps = 30;
+        }
+        if (current_level === 2) {
+            level_rocks = 50;
+        }
+        if (current_level === 6) {
+            level_target = 99999;
+            level_diggers = 800;
+        }
+        const level_timeLimit = level_target * 2;
+        const level = new Int32Array(2097152);
+        level[0] = 200;
+        level[512] = 200;
+        let i, x, yMo, xo;
+        for(i = 512; i > 1; i = Math.floor(i / 2)) {
+            for(x = 0; x < 1024; x += i) {
+                const yMo_val = level[x];
+                const xo_val = level[(x + i) & 1023];
+                const rand_val = Math.floor(Math.random() * i) - Math.floor(i / 2);
+                level[x + Math.floor(i / 2)] = Math.floor((yMo_val + xo_val) / 2 + rand_val / 4);
+            }
+        }
+        for(i = 0; i < 88; ++i) {
+            level[i] = level[88] - 2;
+            level[level_width - i - 1] = level[level_width - 88 - 1] - 2;
+        }
+        let score, size;
+        for(let i_level = 1; i_level < level_height; ++i_level) {
+            for(let x_level = 0; x_level < level_width; ++x_level) {
+                const yMo_index = x_level | (i_level << 10);
+                const rand1 = Math.random();
+                const rand2 = Math.random();
+                const rand3 = Math.random();
+                let br = 1.2 - (rand1 - 0.5) * rand2 * rand3 * 0.6;
+                br *= 1.0 - yMo_index / 6193152.0;
+                if (x_level >= 8 && x_level < level_width - 8 && i_level < level_height - 8) {
+                    if (i_level < level[x_level]) {
+                        level[yMo_index] = 0;
+                    } else {
+                        score = Math.floor(111.0 * br);
+                        const g = Math.floor(92.0 * br);
+                        size = Math.floor(51.0 * br);
+                        if (i_level < level[x_level] + 4) {
+                            score = Math.floor(44.0 * br);
+                            const g2 = Math.floor(148.0 * br);
+                            size = Math.floor(49.0 * br);
+                            if (x_level < 88 || x_level > level_width - 89) {
+                                size = g2;
+                                score = g2;
+                            }
+                        }
+                        level[yMo_index] = (score << 16) | (g << 8) | size;
+                    }
+                } else {
+                    score = Math.floor(180.0 * br);
+                    level[yMo_index] = (score << 16) | (score << 8) | score;
+                }
+                if (i_level >= level_height - 10 && slimes[current_level] > 0) {
+                    level[yMo_index] = 65280;
+                }
+            }
+        }
+        let yo;
+        let c;
+        for(i = 0; i < level_goldLumps + level_rocks + slimes[current_level]; ++i) {
+            const x_obj = Math.floor(Math.random() * (level_width - 40)) + 20;
+            const yMo_obj = Math.floor(Math.random() * (level_height - 240)) + 200;
+            const xo_obj = Math.floor(Math.random() * (level_height - 240)) + 200;
+            const yo_obj = Math.floor(Math.random() * (level_height - 240)) + 200;
+            score = Math.max(yMo_obj, xo_obj);
+            if (yo_obj > score) {
+                score = yo_obj;
+            }
+            let type = 0;
+            size = Math.floor(Math.random() * 8) + 4;
+            if (i >= level_goldLumps) {
+                size = Math.floor(Math.random() * 32) + 8;
+                type = 1;
+                if (i - level_goldLumps >= level_rocks) {
+                    type = 2;
+                    size = 6;
+                }
+            }
+            for(let xx_obj = x_obj - size; xx_obj <= x_obj + size; ++xx_obj) {
+                for(let yy_obj = score - size; yy_obj <= score + size; ++yy_obj) {
+                    const d = (xx_obj - x_obj) * (xx_obj - x_obj) + (yy_obj - score) * (yy_obj - score);
+                    if (xx_obj >= 0 && yy_obj >= 0 && xx_obj < 1024 && yy_obj < 2048 && d < size * size) {
+                        if (type === 1) {
+                            const d2 = Math.floor(((((xx_obj - x_obj) + size / 3.0) * (((xx_obj - x_obj) + size / 3.0)) / size / size + ((yy_obj - score) + size / 3.0) * ((yy_obj - score) + size / 3.0) / size / size) * 64.0));
+                            c = 200 - d2 - Math.floor(Math.random() * 16);
+                            if (level[xx_obj | (yy_obj << 10)] !== 0) {
+                                level[xx_obj | (yy_obj << 10)] = (c << 16) | (c << 8) | c;
+                            }
+                        } else if (level[xx_obj | (yy_obj << 10)] !== 0) {
+                            level[xx_obj | (yy_obj << 10)] = (type === 0 ? 0xFFFF00 : 0x00FF00);
+                        }
+                    }
+                }
+            }
+        }
+        const miners = new Array(level_diggers);
+        for(let m = 0; m < miners.length; ++m) {
+            miners[m] = [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ];
+            miners[m][0] = Math.floor(Math.random() * 48) + 24;
+            if (m < Math.floor(miners.length / 2)) {
+                miners[m][0] = level_width - miners[m][0];
+            }
+            miners[m][1] = -Math.floor(Math.random() * 400);
+            miners[m][2] = Math.floor(Math.random() * 2) * 2 - 1;
+            miners[m][7] = -640;
+        }
+        x = 0;
+        yMo = 0;
+        mouseButton = 0;
+        xo = 0;
+        yo = 0;
+        score = 0;
+        let levelOver = false;
+        let levelStarted = false;
+        const roundsStartTime = Date.now();
+        let lastTime = roundsStartTime;
+        const levelLoop = () => {
+            if (levelOver || keys[27]) {
+                if (score >= level_target && current_level < 6) {
+                    current_level++;
+                }
+                return;
+            }
+            const c_mouse = xMouse + xo;
+            const yM_mouse = yMouse + yo;
+            if (levelStarted && mouseButton > 0) {
+                const dist = Math.floor(Math.sqrt((c_mouse - x) * (c_mouse - x) + (yM_mouse - yMo) * (yM_mouse - yMo))) + 1;
+                for(let step = 0; step < dist; ++step) {
+                    const xx_dig = Math.floor(c_mouse + (x - c_mouse) * step / dist);
+                    const y_dig = Math.floor(yM_mouse + (yMo - yM_mouse) * step / dist);
+                    for(let dy = -3; dy <= 3; ++dy) {
+                        for(let dx = -3; dx <= 3; ++dx) {
+                            if ((dy !== -3 && dy !== 3) || (dx !== -3 && dx !== 3)) {
+                                const yyy_dig = xx_dig + dy;
+                                const yyb_dig = y_dig + dx;
+                                if (yyy_dig >= 0 && yyb_dig >= 0 && yyy_dig < 1024 && yyb_dig < 2048) {
+                                    const index_dig = yyy_dig | (yyb_dig << 10);
+                                    if (mouseButton !== 3 && !keys[17]) {
+                                        if (level[index_dig] === 0) {
+                                             const rand_br1 = Math.random();
+                                             const rand_br2 = Math.random();
+                                             const rand_br3 = Math.random();
+                                             let br_dig = 1.6 - (rand_br1 - 0.5) * rand_br2 * rand_br3 * 0.6;
+                                             br_dig *= 1.0 - index_dig / 6193152.0;
+                                             const r_dig = Math.floor(111.0 * br_dig);
+                                             const g_dig = Math.floor(92.0 * br_dig);
+                                             const b_dig = Math.floor(51.0 * br_dig);
+                                             level[index_dig] = (r_dig << 16) | (g_dig << 8) | b_dig;
+                                        }
+                                    } else {
+                                        const dd_dig = (level[index_dig] >> 16) & 255;
+                                        const xxa_dig = (level[index_dig] >> 8) & 255;
+                                        const yya_dig = (level[index_dig] >> 0) & 255;
+                                        if (dd_dig !== xxa_dig || dd_dig !== yya_dig) {
+                                            if (level[index_dig] !== 16776960) {
+                                                level[index_dig] = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            x = c_mouse;
+            yMo = yM_mouse;
+            const imgData = ctx.createImageData(640, 480);
+            const data = imgData.data;
+            for(let i_render = 0; i_render < 480; ++i_render) {
+                const level_y = yo + i_render;
+                if (level_y >= 0 && level_y < level_height) {
+                    for(let j_render = 0; j_render < 640; ++j_render) {
+                        const level_x = xo + j_render;
+                        const pixel_index = (i_render * 640 + j_render) * 4;
+                        let color = 0;
+                        if (level_x >= 0 && level_x < level_width) {
+                            color = level[level_x | (level_y << 10)];
+                        }
+                        data[pixel_index + 0] = (color >> 16) & 0xFF;
+                        data[pixel_index + 1] = (color >> 8) & 0xFF;
+                        data[pixel_index + 2] = (color >> 0) & 0xFF;
+                        data[pixel_index + 3] = 255;
+                    }
+                } else {
+                     for(let j_render = 0; j_render < 640; ++j_render) {
+                         const pixel_index = (i_render * 640 + j_render) * 4;
+                         data[pixel_index + 0] = 0;
+                         data[pixel_index + 1] = 0;
+                         data[pixel_index + 2] = 0;
+                         data[pixel_index + 3] = 255;
+                     }
+                }
+            }
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 640;
+            tempCanvas.height = 480;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imgData, 0, 0);
+            for(let i_miner = 0; i_miner < miners.length; ++i_miner) {
+                if (miners[i_miner][6] < 16) {
+                    for(let dx_miner = -3; dx_miner <= 3; ++dx_miner) {
+                        for(let dy_miner = -8; dy_miner <= 1; ++dy_miner) {
+                            const screen_x = miners[i_miner][0] - xo + dx_miner * miners[i_miner][2];
+                            const screen_y = miners[i_miner][1] - yo + dy_miner;
+                            if (screen_x >= 0 && screen_y >= 0 && screen_x < 640 && screen_y < 480) {
+                                let sprite_index_offset = Math.floor(miners[i_miner][3] / 4) * 7 * 10;
+                                if (miners[i_miner][6] > 0) {
+                                    sprite_index_offset = (Math.floor(miners[i_miner][6] / 4) + 3) * 7 * 10;
+                                }
+                                const sprite_char_index = dx_miner + 3 + (dy_miner + 8) * 7 + sprite_index_offset;
+                                if (sprite_char_index >= 0 && sprite_char_index < SPRITES.length) {
+                                    const ch = SPRITES.charAt(sprite_char_index);
+                                    let pixel_color = null;
+                                    if (ch === 'X' && miners[i_miner][5] === 1) {
+                                        pixel_color = '#FFFF00';
+                                    } else if (ch === 'o') {
+                                        pixel_color = '#DBC8AF';
+                                    } else if (ch === '!') {
+                                        pixel_color = '#00FF00';
+                                    } else if (ch === '*') {
+                                        pixel_color = '#0000FF';
+                                    } else if (ch === '#') {
+                                        pixel_color = '#FF0000';
+                                    }
+                                    if (pixel_color) {
+                                        tempCtx.fillStyle = pixel_color;
+                                        tempCtx.fillRect(screen_x, screen_y, 1, 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            while(levelStarted && lastTime < Date.now()) {
+                lastTime += 25;
+                for(let i_slime = 0; i_slime < 400; ++i_slime) {
+                    const xx_slime = Math.floor(Math.random() * 1021) + 1;
+                    const yy_slime = Math.floor(Math.random() * 1021) + 1;
+                    for(let dx_slime = -1; dx_slime <= 1; ++dx_slime) {
+                        for(let dy_slime = -1; dy_slime <= 1; ++dy_slime) {
+                             const nx = xx_slime + dx_slime;
+                             const ny = yy_slime + dy_slime;
+                             if (nx >= 0 && ny >= 0 && nx < 1024 && ny < 2048) {
+                                 const index_check = nx | (yy_slime << 10);
+                                 const index_set = nx | (ny << 10);
+                                 if (level[index_check] === 65280) {
+                                     level[index_set] = 65280;
+                                 }
+                             }
+                        }
+                    }
+                }
+                for(let i_miner_update = 0; i_miner_update < miners.length; ++i_miner_update) {
+                    if (miners[i_miner_update][6] !== 0) {
+                        if (miners[i_miner_update][6] < 16) {
+                            miners[i_miner_update][6]++;
+                        }
+                    } else {
+                        if (miners[i_miner_update][4] > 1 && miners[i_miner_update][1] > 1) {
+                            const index_check = (miners[i_miner_update][0] + miners[i_miner_update][2]) | ((miners[i_miner_update][1] - Math.floor(miners[i_miner_update][4] / 8)) << 10);
+                            if (index_check >= 0 && index_check < level.length && level[index_check] === 0) {
+                                miners[i_miner_update][0] += miners[i_miner_update][2];
+                                miners[i_miner_update][1] -= Math.floor(miners[i_miner_update][4] / 8);
+                                miners[i_miner_update][3] = (miners[i_miner_update][3] + 1) & 15;
+                                miners[i_miner_update][4]--;
+                            } else {
+                                miners[i_miner_update][4] = 0;
+                            }
+                        } else {
+                            if (miners[i_miner_update][1] > 0) {
+                                const index_below = miners[i_miner_update][0] | (miners[i_miner_update][1] << 10);
+                                if (index_below >= 0 && index_below < level.length && level[index_below] === 16776960) {
+                                    miners[i_miner_update][1]--;
+                                }
+                            }
+                            const index_below_check = miners[i_miner_update][0] | ((miners[i_miner_update][1] + 1) << 10);
+                            if (miners[i_miner_update][1] >= 4 && index_below_check >= 0 && index_below_check < level.length && level[index_below_check] !== 0) {
+                                if (miners[i_miner_update][7] > 100) {
+                                    miners[i_miner_update][6] = 1;
+                                    level_diggers--;
+                                    miners[i_miner_update][0] -= miners[i_miner_update][2];
+                                }
+                                miners[i_miner_update][7] = 0;
+                                miners[i_miner_update][4] = -1;
+                                if (Math.floor(Math.random() * 20) !== 0) {
+                                    let hit = true;
+                                    for(let dy_check = 2; dy_check >= -4; --dy_check) {
+                                        const index_move = (miners[i_miner_update][0] + miners[i_miner_update][2]) | ((miners[i_miner_update][1] + dy_check) << 10);
+                                        if (index_move >= 0 && index_move < level.length && level[index_move] === 0) {
+                                            miners[i_miner_update][0] += miners[i_miner_update][2];
+                                            miners[i_miner_update][1] += dy_check;
+                                            miners[i_miner_update][3] = (miners[i_miner_update][3] + 1) & 15;
+                                            hit = false;
+                                            break;
+                                        }
+                                    }
+                                    if (Math.floor(Math.random() * (hit ? 10 : 4000)) === 0) {
+                                        miners[i_miner_update][2] *= -1;
+                                        if (hit && Math.floor(Math.random() * 3) !== 0) {
+                                            miners[i_miner_update][4] = 16;
+                                        }
+                                    }
+                                }
+                            } else if (miners[i_miner_update][4] === -1 && Math.floor(Math.random() * 3) !== 0) {
+                                miners[i_miner_update][4] = 16;
+                            } else {
+                                for(let fall_step = 0; fall_step < 2; ++fall_step) {
+                                    if (miners[i_miner_update][1] < 4) {
+                                        miners[i_miner_update][1]++;
+                                        miners[i_miner_update][4] = 0;
+                                        miners[i_miner_update][7]++;
+                                    } else {
+                                        const index_fall = miners[i_miner_update][0] | ((miners[i_miner_update][1] + 1) << 10);
+                                        if (index_fall >= 0 && index_fall < level.length && level[index_fall] === 0) {
+                                             miners[i_miner_update][1]++;
+                                             miners[i_miner_update][4] = 0;
+                                             miners[i_miner_update][7]++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (miners[i_miner_update][5] === 1 && miners[i_miner_update][1] <= level[miners[i_miner_update][0]] &&
+                            (miners[i_miner_update][0] === 40 || miners[i_miner_update][0] === level_width - 8 - 32)) {
+                            score++;
+                            for(let g = 0; g < 4; ++g) {
+                                let xx_gold = miners[i_miner_update][0];
+                                let y_gold = miners[i_miner_update][1] - 5;
+                                let done_gold = false;
+                                while(!done_gold) {
+                                    const index_down = (xx_gold + 0) | ((y_gold + 1) << 10);
+                                    const index_left = (xx_gold - 1) | ((y_gold + 1) << 10);
+                                    const index_right = (xx_gold + 1) | ((y_gold + 1) << 10);
+                                    if (index_down >= 0 && index_down < level.length && level[index_down] === 0) {
+                                        y_gold++;
+                                    } else if (index_left >= 0 && index_left < level.length && level[index_left] === 0) {
+                                        xx_gold--;
+                                        y_gold++;
+                                    } else if (index_right >= 0 && index_right < level.length && level[index_right] === 0) {
+                                        xx_gold++;
+                                        y_gold++;
+                                    } else {
+                                        done_gold = true;
+                                    }
+                                }
+                                if (y_gold < level[xx_gold]) {
+                                    const index_place = xx_gold | (y_gold << 10);
+                                    if (index_place >= 0 && index_place < level.length) {
+                                         level[index_place] = 16711168;
+                                    }
+                                }
+                            }
+                            miners[i_miner_update][5] = 0;
+                        }
+                        for(let dx_col = -3; dx_col <= 3; ++dx_col) {
+                            for(let dy_col = -8; dy_col <= 1; ++dy_col) {
+                                const x_col = miners[i_miner_update][0] + dx_col * miners[i_miner_update][2];
+                                const y_col = miners[i_miner_update][1] + dy_col;
+                                if (x_col >= 0 && y_col >= 0 && x_col < level_width && y_col < level_height) {
+                                    const sprite_char_index_col = dx_col + 3 + (dy_col + 8) * 7 + Math.floor(miners[i_miner_update][3] / 4) * 7 * 10;
+                                    if (sprite_char_index_col >= 0 && sprite_char_index_col < SPRITES.length && SPRITES.charAt(sprite_char_index_col) !== ' ') {
+                                        const index_col = x_col | (y_col << 10);
+                                        if (level[index_col] === 65280) {
+                                            miners[i_miner_update][6] = 1;
+                                            level_diggers--;
+                                            const s = 16;
+                                            for(let yyy_expl = -s; yyy_expl <= s; ++yyy_expl) {
+                                                for(let yyb_expl = -s; yyb_expl <= s; ++yyb_expl) {
+                                                    const dd_expl = yyy_expl * yyy_expl + yyb_expl * yyb_expl;
+                                                    const xxa_expl = yyy_expl + miners[i_miner_update][0];
+                                                    const yya_expl = yyb_expl + miners[i_miner_update][1] - 4;
+                                                    if (xxa_expl >= 4 && yya_expl >= 4 && xxa_expl < level_width - 4 && yya_expl < level_height - 4 && dd_expl < s * s) {
+                                                        const index_expl = xxa_expl | (yya_expl << 10);
+                                                        if (index_expl >= 0 && index_expl < level.length) {
+                                                            if (level[index_expl] !== 16776960) {
+                                                                level[index_expl] = 0;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (miners[i_miner_update][5] === 0 && level[index_col] === 16776960) {
+                                            for(let xxx_gold = -1; xxx_gold <= 1; ++xxx_gold) {
+                                                for(let yyy_gold = -1; yyy_gold <= 1; ++yyy_gold) {
+                                                     const nx_gold = (x_col + xxx_gold) & 1023;
+                                                     const ny_gold = (y_col + yyy_gold) & 1023;
+                                                     const index_gold_check = nx_gold | (ny_gold << 10);
+                                                     if (index_gold_check >= 0 && index_gold_check < level.length && level[index_gold_check] === 16776960) {
+                                                         level[index_gold_check] = 0;
+                                                     }
+                                                }
+                                            }
+                                            miners[i_miner_update][5] = 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (keys[37] && xo > 8) {
+                    xo -= 8;
+                }
+                if (keys[39] && xo < level_width - 640) {
+                    xo += 8;
+                }
+                if (keys[38] && yo > 8) {
+                    yo -= 8;
+                }
+                if (keys[40] && yo < (current_level > 1 ? 1024 : 480) - 480) {
+                    yo += 8;
+                }
+            }
+            img2Ctx.clearRect(0, 0, 640, 480);
+            img2Ctx.drawImage(tempCanvas, 0, 0);
+            if (!levelStarted) {
+                img2Ctx.font = 'bold 30px Sans-Serif';
+                img2Ctx.fillStyle = 'white';
+                img2Ctx.fillText(levelNames[current_level], 200, 100);
+                img2Ctx.font = '12px Sans-Serif';
+                img2Ctx.fillText(infoStrings[current_level], 200, 116);
+                img2Ctx.fillText("(click to start)", 200, 132);
+                if (mouseButton > 0) {
+                    levelStarted = true;
+                    mouseButton = 0;
+                    lastTime = Date.now();
+                }
+            }
+            const currentTimeSecs = Math.floor((Date.now() - roundsStartTime) / 1000);
+            img2Ctx.font = '12px Sans-Serif';
+            img2Ctx.fillStyle = 'white';
+            img2Ctx.fillText("Miners: " + level_diggers, 10, 36);
+            img2Ctx.fillText("Gold: " + score + " / " + level_target, 10, 48);
+            img2Ctx.fillText("Time left: " + (level_timeLimit - currentTimeSecs), 10, 60);
+            ctx.clearRect(0, 0, 640, 480);
+            ctx.drawImage(img2Canvas, 0, 0);
+            if (score >= level_target) {
+                 img2Ctx.font = 'bold 30px Sans-Serif';
+                 img2Ctx.fillText("LEVEL PASSED!", 200, 100);
+                 ctx.drawImage(img2Canvas, 0, 0);
+                 levelOver = true;
+                 setTimeout(() => {
+                     if(current_level < 6) current_level++;
+                     gameLoop();
+                 }, 2000);
+                 return;
+            }
+            if (level_diggers <= 0 || (level_timeLimit - currentTimeSecs) <= 0 || keys[75]) {
+                 img2Ctx.font = 'bold 30px Sans-Serif';
+                 img2Ctx.fillText("LEVEL FAILED!", 200, 100);
+                 ctx.drawImage(img2Canvas, 0, 0);
+                 levelOver = true;
+                 setTimeout(() => {
+                     gameLoop();
+                 }, 2000);
+                 return;
+            }
+            requestAnimationFrame(levelLoop);
+        };
+        requestAnimationFrame(levelLoop);
+    };
+    window.addEventListener('keydown', processEvent);
+    window.addEventListener('keyup', processEvent);
+    canvas.addEventListener('mousedown', processEvent);
+    canvas.addEventListener('mouseup', processEvent);
+    canvas.addEventListener('mousemove', processEvent);
+    gameLoop();
+});
+</script>
+</body>
+</html>

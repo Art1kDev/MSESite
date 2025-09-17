@@ -1,126 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KvotaWeb</title>
-    <link rel="icon" href="Res/favicon.png" type="image/png">
-    <style>
-        @font-face {
-            font-family: 'Minecraftfont';
-            src: url('Fonts/font.ttf') format('truetype');
-        }
-        body {
-            font-family: 'Minecraftfont', sans-serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            background-image: url('Res/BackGround.png');
-            background-size: 32px 32px;
-            background-repeat: repeat;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow: hidden;
-        }
-        .logo {
-            max-width: 720px;
-            max-height: 240px;
-            margin-top: 20px;
-        }
-        #splashContainer {
-            font-family: 'Minecraftfont', sans-serif;
-            font-size: 20px;
-            color: #FFFF00;
-            font-weight: bold;
-            text-shadow: 2px 2px 5px black;
-            margin-top: -10px;
-            position: relative;
-            left: 150px;
-            white-space: nowrap;
-            display: inline-block;
-        }
-        .menu-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 150px;
-            margin: 50px auto 0 auto;
-            align-items: center;
-        }
-        select, button {
-            font-family: 'Minecraftfont', sans-serif;
-            width: 150px;
-            height: 28px;
-            font-size: 14px;
-            cursor: pointer;
-            border-radius: 3px;
-            background-color: transparent;
-            border: none;
-            color: black;
-            outline: none;
-            text-align: center;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-        }
-        select option {
-            text-align: center;
-            background-color: rgba(0,0,0,0);
-            color: black;
-        }
-        .version-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 14px;
-            color: white;
-        }
-        .version-info span {
-            color: #0000FF;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KvotaWeb</title>
+<link rel="icon" href="Res/favicon.png" type="image/png">
+<style>
+@font-face {
+    font-family: 'Minecraftfont';
+    src: url('Fonts/font.ttf') format('truetype');
+}
+body {
+    font-family: 'Minecraftfont', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-image: url('Res/BackGround.png');
+    background-size: 32px 32px;
+    background-repeat: repeat;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+}
+.logo {
+    max-width: 720px;
+    max-height: 240px;
+    margin-top: 20px;
+}
+#splashContainer {
+    font-family: 'Minecraftfont', sans-serif;
+    font-size: 20px;
+    color: #FFFF00;
+    font-weight: bold;
+    text-shadow: 2px 2px 5px black;
+    margin-top: -10px;
+    position: relative;
+    left: 150px;
+    white-space: nowrap;
+    display: inline-block;
+}
+.menu-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 150px;
+    margin: 50px auto 0 auto;
+    align-items: center;
+}
+select {
+    font-family: 'Minecraftfont', sans-serif;
+    width: 150px;
+    height: 28px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 3px;
+    background-color: transparent;
+    border: none;
+    color: black;
+    outline: none;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+select option {
+    text-align: center;
+    background-color: rgba(0,0,0,0);
+    color: black;
+}
+button {
+    font-family: 'Minecraftfont', sans-serif;
+    width: 200px;
+    height: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    color: white;
+    background-image: url('Res/Gui/BDef.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    outline: none;
+}
+button:hover, button:active {
+    background-image: url('Res/Gui/BClick.png');
+}
+.version-info {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 14px;
+    color: white;
+}
+.version-info span {
+    color: #0000FF;
+}
+</style>
 </head>
 <body>
 <img src="Res/logo.png" alt="Logo" class="logo">
 <div id="splashContainer"></div>
 <div class="menu-container">
-    <select id="versionSelect">
-        <option value="Minecraft4kOLD.html">Minecraft4k-OLD</option>
-        <option value="Minecraft4k.html">Minecraft4k</option>
-        <option value="VVVVVV.html">VVVVVV4k</option>
-        <option value="Miners4k.html">Miners4k</option>
-        <option value="SonicRacer4k.html">SonicRacer4k</option>
-        <option value="Left4kDeadTest.html">Left4kDeadTest</option>
-    </select>
-    <button onclick="launchVersion()">LAUNCH</button>
+<select id="versionSelect">
+<option value="Minecraft4kOLD.html">Minecraft4k-OLD</option>
+<option value="Minecraft4k.html">Minecraft4k</option>
+<option value="VVVVVV.html">VVVVVV4k</option>
+<option value="Miners4k.html">Miners4k</option>
+<option value="SonicRacer4k.html">SonicRacer4k</option>
+<option value="Left4kDeadTest.html">Left4kDeadTest</option>
+</select>
+<button onclick="launchVersion()">LAUNCH</button>
 </div>
 <div class="version-info">Version: <span id="versionText">0.5.3</span></div>
 <script>
-    const splashes = ["Pre-beta!","As seen on TV!","Awesome!","100% pure!","May contain nuts!","Better than Prey!","More polygons!","Sexy!","Limited edition!","Flashing letters!","Made by Notch!","Coming soon!","Best in class!","When it's finished!","Absolutely dragon free!","Excitement!","More than 500 sold!","One of a kind!","Heaps of hits on YouTube!","Indev!","Spiders everywhere!","Check it out!","Holy cow, man!","It's a game!","Made in Sweden!","Uses LWJGL!","Reticulating splines!","Minecraft!","Yaaay!","Alpha version!","Singleplayer!","Keyboard compatible!","Undocumented!","Ingots!","Exploding creepers!","That's not a moon!","l33t!","Create!","Survive!","Dungeon!","Exclusive!","The bee's knees!","Down with O.P.P.!","Closed source!","Classy!","Wow!","Not on steam!","9.95 euro!","Half price!","Oh man!","Check it out!","Awesome community!","Pixels!","Teetsuuuuoooo!","Kaaneeeedaaaa!","Now with difficulty!","Enhanced!","90% bug free!","Pretty!","12 herbs and spices!","Fat free!","Absolutely no memes!","Free dental!","Ask your doctor!","Minors welcome!","Cloud computing!","Legal in Finland!","Hard to label!","Technically good!","Bringing home the bacon!","Indie!","GOTY!","Ceci n'est pas a title screen!","Euclidian!","Now in 3D!","Inspirational!","Herregud!","Complex cellular automata!","Yes, sir!","Played by cowboys!","OpenGL 1.1!","Thousands of colors!","Try it!","Age of Wonders is better!","Try the mushroom stew!","Sensational!","Hot tamale, hot hot tamale!","Play him off, keyboard cat!","Guaranteed!","Macroscopic!","Bring it on!","Random splash!","Call your mother!","Monster infighting!","Loved by millions!","Ultimate edition!","Freaky!","You've got a brand new key!","Water proof!","Uninflammable!","Whoa, dude!","All inclusive!","Tell your friends!","NP is not in P!","Notch <3 ez!","Music by C418!","Livestreamed!","Haunted!","Polynomial!","Terrestrial!","All is full of love!","Full of stars!","Scientific!","Cooler than Spock!","Collaborate and listen!","Never dig down!","Take frequent breaks!","Not linear!","Han shot first!","Nice to meet you!","Buckets of lava!","Ride the pig!","Larger than Earth!","sqrt(-1) love you!","Phobos anomaly!","Punching wood!","Falling off cliffs!","0% sugar!","150% hyperbole!","Synecdoche!","Let's danec!","Seecret Friday update!","Reference implementation!","Lewd with two dudes with food!","Kiss the sky!","20 GOTO 10!","Verlet intregration!","Peter Griffin!","Do not distribute!","Cogito ergo sum!","4815162342 lines of code!","A skeleton popped out!","The Work of Notch!","The sum of its parts!","BTAF used to be good!","I miss ADOM!","umop-apisdn!","OICU812!","Bring me Ray Cokes!","Finger-licking!","Thematic!","Pneumatic!","Sublime!","Octagonal!","Une baguette!","Gargamel plays it!","Rita is the new top dog!","SWM forever!","Representing Edsbyn!","Matt Damon!","Superfragilisticexpialidocious!","Consummate V's!","Cow Tools!","Double buffered!","Fan fiction!","Flaxkikare!","Jason! Jason! Jason!","Hotter than the sun!","Internet enabled!","Autonomous!","Engage!","Fantasy!","DRR! DRR! DRR!","Kick it root down!","Regional resources!","Woo, facepunch!","Woo, somethingawful!","Woo, /v/!","Woo, tigsource!","Woo, minecraftforum!","Woo, worldofminecraft!","Google anlyticsed!","Now supports ���!","Give us Gordon!","Tip your waiter!","Very fun!","12345 is a bad password!","Vote for net neutrality!","Lives in a pineapple under the sea!","MAP11 has two names!","Omnipotent!","Gasp!","...!","Bees, bees, bees, bees!","Jag känner en bot!","This text is hard to read if you play the game at the default resolution, but at 1080p it's fine!","Haha, LOL!","Hampsterdance!","Switches and ores!","Menger sponge!","idspispopd!","Eple (original edit)!","So fresh, so clean!","Slow acting portals!","Try the Nether!","Don't look directly at the bugs!","Oh, ok, Pigmen!","Finally with ladders!","Scary!","Play Minecraft, Watch Topgear, Get Pig"];
-    function initSplash() {
-        const splash = document.getElementById('splashContainer');
-        const splashIndex = Math.floor(Math.random() * splashes.length);
-        splash.textContent = splashes[splashIndex];
-        let startTime = Date.now();
-        const pulseAmplitude = 0.1;
-        const pulseSpeed = 0.002;
-        const angle = -20;
-        function animate() {
-            const t = Date.now() - startTime;
-            const scale = 1 + Math.sin(t * pulseSpeed * 2 * Math.PI) * pulseAmplitude;
-            splash.style.transform = `translateX(-50%) translateY(-35px) translateX(145px) rotate(${angle}deg) scale(${scale})`;
-            requestAnimationFrame(animate);
-        }
-        animate();
+const splashes = ["Pre-beta!","As seen on TV!","Awesome!","100% pure!","May contain nuts!","Better than Prey!","More polygons!","Sexy!","Limited edition!","Flashing letters!","Made by Notch!","Coming soon!","Best in class!","When it's finished!","Absolutely dragon free!","Excitement!","More than 500 sold!","One of a kind!","Heaps of hits on YouTube!","Indev!","Spiders everywhere!","Check it out!","Holy cow, man!","It's a game!","Made in Sweden!","Uses LWJGL!","Reticulating splines!","Minecraft!","Yaaay!","Alpha version!","Singleplayer!","Keyboard compatible!","Undocumented!","Ingots!","Exploding creepers!","That's not a moon!","l33t!","Create!","Survive!","Dungeon!","Exclusive!","The bee's knees!","Down with O.P.P.!","Closed source!","Classy!","Wow!","Not on steam!","9.95 euro!","Half price!","Oh man!","Check it out!","Awesome community!","Pixels!","Teetsuuuuoooo!","Kaaneeeedaaaa!","Now with difficulty!","Enhanced!","90% bug free!","Pretty!","12 herbs and spices!","Fat free!","Absolutely no memes!","Free dental!","Ask your doctor!","Minors welcome!","Cloud computing!","Legal in Finland!","Hard to label!","Technically good!","Bringing home the bacon!","Indie!","GOTY!","Ceci n'est pas a title screen!","Euclidian!","Now in 3D!","Inspirational!","Herregud!","Complex cellular automata!","Yes, sir!","Played by cowboys!","OpenGL 1.1!","Thousands of colors!","Try it!","Age of Wonders is better!","Try the mushroom stew!","Sensational!","Hot tamale, hot hot tamale!","Play him off, keyboard cat!","Guaranteed!","Macroscopic!","Bring it on!","Random splash!","Call your mother!","Monster infighting!","Loved by millions!","Ultimate edition!","Freaky!","You've got a brand new key!","Water proof!","Uninflammable!","Whoa, dude!","All inclusive!","Tell your friends!","NP is not in P!","Notch <3 ez!","Music by C418!","Livestreamed!","Haunted!","Polynomial!","Terrestrial!","All is full of love!","Full of stars!","Scientific!","Cooler than Spock!","Collaborate and listen!","Never dig down!","Take frequent breaks!","Not linear!","Han shot first!","Nice to meet you!","Buckets of lava!","Ride the pig!","Larger than Earth!","sqrt(-1) love you!","Phobos anomaly!","Punching wood!","Falling off cliffs!","0% sugar!","150% hyperbole!","Synecdoche!","Let's danec!","Seecret Friday update!","Reference implementation!","Lewd with two dudes with food!","Kiss the sky!","20 GOTO 10!","Verlet intregration!","Peter Griffin!","Do not distribute!","Cogito ergo sum!","4815162342 lines of code!","A skeleton popped out!","The Work of Notch!","The sum of its parts!","BTAF used to be good!","I miss ADOM!","umop-apisdn!","OICU812!","Bring me Ray Cokes!","Finger-licking!","Thematic!","Pneumatic!","Sublime!","Octagonal!","Une baguette!","Gargamel plays it!","Rita is the new top dog!","SWM forever!","Representing Edsbyn!","Matt Damon!","Superfragilisticexpialidocious!","Consummate V's!","Cow Tools!","Double buffered!","Fan fiction!","Flaxkikare!","Jason! Jason! Jason!","Hotter than the sun!","Internet enabled!","Autonomous!","Engage!","Fantasy!","DRR! DRR! DRR!","Kick it root down!","Regional resources!","Woo, facepunch!","Woo, somethingawful!","Woo, /v/!","Woo, tigsource!","Woo, minecraftforum!","Woo, worldofminecraft!","Google anlyticsed!","Now supports ���!","Give us Gordon!","Tip your waiter!","Very fun!","12345 is a bad password!","Vote for net neutrality!","Lives in a pineapple under the sea!","MAP11 has two names!","Omnipotent!","Gasp!","...!","Bees, bees, bees, bees!","Jag känner en bot!","This text is hard to read if you play the game at the default resolution, but at 1080p it's fine!","Haha, LOL!","Hampsterdance!","Switches and ores!","Menger sponge!","idspispopd!","Eple (original edit)!","So fresh, so clean!","Slow acting portals!","Try the Nether!","Don't look directly at the bugs!","Oh, ok, Pigmen!","Finally with ladders!","Scary!","Play Minecraft, Watch Topgear, Get Pig"];
+function initSplash() {
+    const splash = document.getElementById('splashContainer');
+    const splashIndex = Math.floor(Math.random() * splashes.length);
+    splash.textContent = splashes[splashIndex];
+    let startTime = Date.now();
+    const pulseAmplitude = 0.1;
+    const pulseSpeed = 0.002;
+    const angle = -20;
+    function animate() {
+        const t = Date.now() - startTime;
+        const scale = 1 + Math.sin(t * pulseSpeed * 2 * Math.PI) * pulseAmplitude;
+        splash.style.transform = `translateX(-50%) translateY(-35px) translateX(145px) rotate(${angle}deg) scale(${scale})`;
+        requestAnimationFrame(animate);
     }
-    initSplash();
-    function launchVersion() {
-        const selectedVersion = document.getElementById('versionSelect').value;
-        if(selectedVersion) window.location.href = selectedVersion;
-        else alert('Please select a version first!');
-    }
+    animate();
+}
+initSplash();
+function launchVersion() {
+    const selectedVersion = document.getElementById('versionSelect').value;
+    if(selectedVersion) window.location.href = selectedVersion;
+    else alert('Please select a version first!');
+}
 </script>
 </body>
 </html>

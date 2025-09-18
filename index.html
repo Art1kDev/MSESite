@@ -60,16 +60,13 @@ body {
 .menu-container {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 150px;
+    gap: 20px;
+    width: 200px;
     align-items: center;
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
     z-index: 2;
 }
-select {
+#versionSelect {
     width: 150px;
     height: 28px;
     font-size: 14px;
@@ -83,8 +80,10 @@ select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+    position: absolute;
+    top: 120px;
 }
-select option {
+#versionSelect option {
     text-align: center;
     background-color: rgba(0,0,0,0);
     color: black;
@@ -100,6 +99,8 @@ button {
     background-size: cover;
     background-repeat: no-repeat;
     outline: none;
+    position: absolute;
+    top: 140px;
 }
 button:hover, button:active {
     background-image: url('Res/Gui/BClick.png');
@@ -114,6 +115,35 @@ button:hover, button:active {
 }
 .version-info span {
     color: #0000FF;
+}
+@media (max-width: 600px) {
+    .logo {
+        max-width: 360px;
+        max-height: 120px;
+    }
+    .panel {
+        width: 300px;
+        height: calc(100% - 150px);
+    }
+    #splashContainer {
+        font-size: 14px;
+        left: 80px;
+    }
+    #versionSelect {
+        width: 120px;
+        height: 24px;
+        font-size: 12px;
+        top: 80px;
+    }
+    button {
+        width: 150px;
+        height: 18px;
+        font-size: 12px;
+        top: 100px;
+    }
+    .version-info {
+        font-size: 12px;
+    }
 }
 </style>
 </head>

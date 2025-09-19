@@ -17,7 +17,7 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    background-image: url('Res/BackGround.png');
+    background-image: url('Res/Textures/BackGround.png');
     background-size: 32px 32px;
     background-repeat: repeat;
     color: white;
@@ -30,60 +30,40 @@ body {
 .logo {
     width: 720px;
     height: 120px;
-    margin-top: 10px;
+    margin-top: 20px;
+    position: relative;
     z-index: 2;
+}
+.panel {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    height: calc(100% - 200px);
+    background-image: url('Res/Textures/Clothwhite.png');
+    background-repeat: repeat;
+    z-index: 0;
 }
 #splashContainer {
     font-size: 20px;
     color: #FFFF00;
     font-weight: bold;
     text-shadow: 2px 2px 5px black;
-    margin-top: 10px;
+    margin-top: -10px;
+    position: relative;
+    left: 150px;
     white-space: nowrap;
     display: inline-block;
     z-index: 2;
 }
-.tabs {
-    display: flex;
-    gap: 5px;
-    margin-top: 10px;
-    z-index: 3;
-}
-.tab {
-    cursor: pointer;
-    padding: 5px 15px;
-    background-image: url('Res/Gui/Clothwhite.png');
-    background-size: 32px 32px;
-    color: black;
-    font-size: 14px;
-    border: 1px solid #555;
-    transition: filter 0.2s ease;
-}
-.tab:hover { filter: brightness(0.9); }
-.tab:active { filter: brightness(0.7); }
-
-.tab-content {
-    display: none;
-    width: 480px;
-    max-width: 90%;
-    margin-top: 20px;
-    padding: 20px;
-    background: transparent;
-    border-radius: 8px;
-    z-index: 2;
-    /* Updated for centering */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-.tab-content.active { display: flex; }
-
 .menu-container {
     display: flex;
     flex-direction: column;
+    width: 200px;
     align-items: center;
-    gap: 10px;
+    position: relative;
+    z-index: 2;
 }
 #versionSelect {
     width: 150px;
@@ -91,23 +71,25 @@ body {
     font-size: 14px;
     cursor: pointer;
     border-radius: 3px;
-    background-color: rgba(255,255,255,0.2);
-    border: 1px solid #555;
+    background-color: transparent;
+    border: none;
     color: black;
     outline: none;
-    /* Added for centering the text */
     text-align: center;
-    text-align-last: center;
-    -moz-text-align-last: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    position: absolute;
+    top: 120px;
 }
 #versionSelect option {
     text-align: center;
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(0,0,0,0);
     color: black;
 }
-button.launch {
-    width: 150px;
-    height: 28px;
+button {
+    width: 200px;
+    height: 20px;
     font-size: 14px;
     cursor: pointer;
     border: none;
@@ -116,84 +98,43 @@ button.launch {
     background-size: cover;
     background-repeat: no-repeat;
     outline: none;
+    position: absolute;
+    top: 140px;
 }
-button.launch:hover, button.launch:active { background-image: url('Res/Gui/BClick.png'); }
-
+button:hover, button:active {
+    background-image: url('Res/Gui/BClick.png');
+}
 .version-info {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
+    top: 20px;
+    right: 20px;
     font-size: 14px;
     color: white;
     z-index: 2;
 }
-.version-info span { color: #0000FF; }
-
-@media (max-width: 768px) {
-    .logo { width: 360px; height: 120px; }
-    #splashContainer { font-size: 16px; }
-    .tab-content { width: 90%; padding: 15px; }
-    #versionSelect { width: 120px; height: 24px; font-size: 12px; }
-    button.launch { width: 120px; height: 24px; font-size: 12px; }
+.version-info span {
+    color: #0000FF;
 }
 </style>
 </head>
 <body>
 <img src="Res/logo.png" alt="Logo" class="logo">
 <div id="splashContainer"></div>
-
-<div class="tabs">
-    <button class="tab" onclick="openTab('news')">News</button>
-    <button class="tab" onclick="openTab('main')">Main</button>
-    <button class="tab" onclick="openTab('archive')">Archive</button>
+<div class="menu-container">
+<select id="versionSelect">
+<option value="Minecraft4kOLD.html">Minecraft4k-OLD</option>
+<option value="Minecraft4k.html">Minecraft4k</option>
+<option value="VVVVVV.html">VVVVVV4k</option>
+<option value="Miners4k.html">Miners4k</option>
+<option value="SonicRacer4k.html">SonicRacer4k</option>
+<option value="Left4kDeadTest.html">Left4kDeadTest</option>
+</select>
+<button onclick="launchVersion()">LAUNCH</button>
 </div>
-
-<div id="news" class="tab-content active">
-    <p>Nothing yet...</p>
-</div>
-
-<div id="main" class="tab-content">
-    <div class="menu-container">
-        <select id="versionSelect">
-            <option value="Minecraft4kOLD.html">Minecraft4k-OLD</option>
-            <option value="Minecraft4k.html">Minecraft4k</option>
-            <option value="VVVVVV.html">VVVVVV4k</option>
-            <option value="Miners4k.html">Miners4k</option>
-            <option value="SonicRacer4k.html">SonicRacer4k</option>
-            <option value="Left4kDeadTest.html">Left4kDeadTest</option>
-        </select>
-        <button class="launch" onclick="launchVersion()">LAUNCH</button>
-    </div>
-</div>
-
-<div id="archive" class="tab-content">
-    <ul style="list-style:none; padding:0;">
-        <li>Minecraft 4K</li>
-        <li>RD-13</li>
-        <li>RD-132211</li>
-        <li>RD-20090515</li>
-        <li>Classic 0.0.11a</li>
-        <li>Classic 0.30</li>
-    </ul>
-</div>
-
-<div class="version-info">Version: <span id="versionText">0.6.0A</span></div>
-
+<div class="version-info">Version: <span id="versionText">0.5.3</span></div>
+<div class="panel"></div>
 <script>
-const splashes=[
-    "Pre-beta!","As seen on TV!","Awesome!","100% pure!","May contain nuts!","Better than Prey!","More polygons!","Sexy!",
-    "Limited edition!","Flashing letters!","Made by Notch!","Coming soon!","Best in class!","When it's finished!","Absolutely dragon free!",
-    "Excitement!","More than 500 sold!","One of a kind!","Heaps of hits on YouTube!","Indev!","Spiders everywhere!","Check it out!","Holy cow, man!",
-    "It's a game!","Made in Sweden!","Uses LWJGL!","Reticulating splines!","Minecraft!","Yaaay!","Alpha version!","Singleplayer!","Keyboard compatible!",
-    "Undocumented!","Ingots!","Exploding creepers!","That's not a moon!","l33t!","Create!","Survive!","Dungeon!","Exclusive!","The bee's knees!",
-    "Down with O.P.P.!","Closed source!","Classy!","Wow!","Not on steam!","9.95 euro!","Half price!","Oh man!","Awesome community!","Pixels!",
-    "Teetsuuuuoooo!","Kaaneeeedaaaa!","Now with difficulty!","Enhanced!","90% bug free!","Pretty!","12 herbs and spices!","Fat free!","Absolutely no memes!",
-    "Free dental!","Ask your doctor!","Minors welcome!","Cloud computing!","Legal in Finland!","Hard to label!","Technically good!","Bringing home the bacon!",
-    "Indie!","GOTY!","Ceci n'est pas a title screen!","Euclidian!","Now in 3D!","Inspirational!","Herregud!","Complex cellular automata!","Yes, sir!",
-    "Played by cowboys!","OpenGL 1.1!","Thousands of colors!","Try it!","Age of Wonders is better!","Try the mushroom stew!","Sensational!","Hot tamale, hot hot tamale!",
-    "Play him off, keyboard cat!","Guaranteed!","Macroscopic!","Bring it on!","Random splash!"
-];
-
+const splashes=["Pre-beta!","As seen on TV!","Awesome!","100% pure!","May contain nuts!","Better than Prey!","More polygons!","Sexy!","Limited edition!","Flashing letters!","Made by Notch!","Coming soon!","Best in class!","When it's finished!","Absolutely dragon free!","Excitement!","More than 500 sold!","One of a kind!","Heaps of hits on YouTube!","Indev!","Spiders everywhere!","Check it out!","Holy cow, man!","It's a game!","Made in Sweden!","Uses LWJGL!","Reticulating splines!","Minecraft!","Yaaay!","Alpha version!","Singleplayer!","Keyboard compatible!","Undocumented!","Ingots!","Exploding creepers!","That's not a moon!","l33t!","Create!","Survive!","Dungeon!","Exclusive!","The bee's knees!","Down with O.P.P.!","Closed source!","Classy!","Wow!","Not on steam!","9.95 euro!","Half price!","Oh man!","Awesome community!","Pixels!","Teetsuuuuoooo!","Kaaneeeedaaaa!","Now with difficulty!","Enhanced!","90% bug free!","Pretty!","12 herbs and spices!","Fat free!","Absolutely no memes!","Free dental!","Ask your doctor!","Minors welcome!","Cloud computing!","Legal in Finland!","Hard to label!","Technically good!","Bringing home the bacon!","Indie!","GOTY!","Ceci n'est pas a title screen!","Euclidian!","Now in 3D!","Inspirational!","Herregud!","Complex cellular automata!","Yes, sir!","Played by cowboys!","OpenGL 1.1!","Thousands of colors!","Try it!","Age of Wonders is better!","Try the mushroom stew!","Sensational!","Hot tamale, hot hot tamale!","Play him off, keyboard cat!","Guaranteed!","Macroscopic!","Bring it on!","Random splash!","Call your mother!","Monster infighting!","Loved by millions!","Ultimate edition!","Freaky!","You've got a brand new key!","Water proof!","Uninflammable!","Whoa, dude!","All inclusive!","Tell your friends!","NP is not in P!","Notch <3 ez!","Music by C418!","Livestreamed!","Haunted!","Polynomial!","Terrestrial!","All is full of love!","Full of stars!","Scientific!","Cooler than Spock!","Collaborate and listen!","Never dig down!","Take frequent breaks!","Not linear!","Han shot first!","Nice to meet you!","Buckets of lava!","Ride the pig!","Larger than Earth!","sqrt(-1) love you!","Phobos anomaly!","Punching wood!","Falling off cliffs!","0% sugar!","150% hyperbole!","Synecdoche!","Let's danec!","Seecret Friday update!","Reference implementation!","Lewd with two dudes with food!","Kiss the sky!","20 GOTO 10!","Verlet intregration!","Peter Griffin!","Do not distribute!","Cogito ergo sum!","4815162342 lines of code!","A skeleton popped out!","The Work of Notch!","The sum of its parts!","BTAF used to be good!","I miss ADOM!","umop-apisdn!","OICU812!","Bring me Ray Cokes!","Finger-licking!","Thematic!","Pneumatic!","Sublime!","Octagonal!","Une baguette!","Gargamel plays it!","Rita is the new top dog!","SWM forever!","Representing Edsbyn!","Matt Damon!","Superfragilisticexpialidocious!","Consummate V's!","Cow Tools!","Double buffered!","Fan fiction!","Flaxkikare!","Jason! Jason! Jason!","Hotter than the sun!","Internet enabled!","Autonomous!","Engage!","Fantasy!","DRR! DRR! DRR!","Kick it root down!","Regional resources!","Woo, facepunch!","Woo, somethingawful!","Woo, /v/!","Woo, tigsource!","Woo, minecraftforum!","Woo, worldofminecraft!","Google anlyticsed!","Now supports !","Give us Gordon!","Tip your waiter!","Very fun!","12345 is a bad password!","Vote for net neutrality!","Lives in a pineapple under the sea!","MAP11 has two names!","Omnipotent!","Gasp!","...!","Bees, bees, bees, bees!","Jag känner en bot!","This text is hard to read if you play the game at the default resolution, but at 1080p it's fine!","Haha, LOL!","Hampsterdance!","Switches and ores!","Menger sponge!","idspispopd!","Eple (original edit)!","So fresh, so clean!","Slow acting portals!","Try the Nether!","Don't look directly at the bugs!","Oh, ok, Pigmen!","Finally with ladders!","Scary!","Play Minecraft, Watch Topgear, Get Pig"];
 function initSplash(){
     const splash=document.getElementById('splashContainer');
     const splashIndex=Math.floor(Math.random()*splashes.length);
@@ -205,19 +146,12 @@ function initSplash(){
     function animate(){
         const t=Date.now()-startTime;
         const scale=1+Math.sin(t*pulseSpeed*2*Math.PI)*pulseAmplitude;
-        splash.style.transform=`translateX(-50%) rotate(${angle}deg) scale(${scale})`;
+        splash.style.transform=`translateX(-50%) translateY(-35px) translateX(145px) rotate(${angle}deg) scale(${scale})`;
         requestAnimationFrame(animate);
     }
     animate();
 }
 initSplash();
-
-function openTab(tabId){
-    document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-}
-openTab('news');
-
 function launchVersion(){
     const selectedVersion=document.getElementById('versionSelect').value;
     if(selectedVersion) window.location.href=selectedVersion;

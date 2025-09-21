@@ -6,131 +6,24 @@
 <title>KvotaWeb</title>
 <link rel="icon" href="Res/favicon.png" type="image/png">
 <style>
-@font-face {
-    font-family: 'Minecraftfont';
-    src: url('Fonts/font.ttf') format('truetype');
-}
-html, body, * {
-    font-family: 'Minecraftfont' !important;
-}
-body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    background-image: url('Res/BackGround.png');
-    background-size: 32px 32px;
-    background-repeat: repeat;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    overflow: hidden;
-    position: relative;
-}
-.logo {
-    width: 720px;
-    height: 120px;
-    margin-top: 20px;
-    position: relative;
-    z-index: 2;
-}
-.panel {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 500px;
-    height: calc(100% - 200px);
-    background-image: url('Res/Gui/Clothwhite.png');
-    background-repeat: repeat;
-    z-index: 0;
-}
-#splashContainer {
-    font-size: 20px;
-    color: #FFFF00;
-    font-weight: bold;
-    text-shadow: 2px 2px 5px black;
-    margin-top: -10px;
-    position: relative;
-    left: 150px;
-    white-space: nowrap;
-    display: inline-block;
-    z-index: 2;
-}
-.menu-container {
-    display: flex;
-    flex-direction: column;
-    width: 200px;
-    align-items: center;
-    position: relative;
-    z-index: 2;
-}
-#versionSelect {
-    width: 150px;
-    height: 28px;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 3px;
-    background-color: transparent;
-    border: none;
-    color: black;
-    outline: none;
-    text-align: center;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    position: absolute;
-    top: 120px;
-}
-#versionSelect option {
-    text-align: center;
-    background-color: rgba(0,0,0,0);
-    color: black;
-}
-button {
-    width: 200px;
-    height: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    border: none;
-    color: white;
-    background-image: url('Res/Gui/BDef.png');
-    background-size: cover;
-    background-repeat: no-repeat;
-    outline: none;
-    position: absolute;
-    top: 140px;
-}
-button:hover, button:active {
-    background-image: url('Res/Gui/BClick.png');
-}
-.version-info {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 14px;
-    color: white;
-    z-index: 2;
-}
-.version-info span {
-    color: #0000FF;
-}
+@font-face { font-family: 'Minecraftfont'; src: url('Fonts/font.ttf') format('truetype'); }
+html, body, * { font-family: 'Minecraftfont' !important; }
+body { margin:0; padding:0; min-height:100vh; background-image:url('Res/BackGround.png'); background-size:32px 32px; background-repeat:repeat; color:white; display:flex; flex-direction:column; align-items:center; overflow:hidden; position:relative; }
+.logo { width:720px; height:120px; margin-top:20px; position:relative; z-index:2; }
+.panel { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:500px; height:calc(100% - 200px); background-image:url('Res/Gui/Clothwhite.png'); background-repeat:repeat; z-index:0; }
+#splashContainer { font-size:20px; color:#FFFF00; font-weight:bold; text-shadow:2px 2px 5px black; margin-top:-10px; position:relative; left:150px; white-space:nowrap; display:inline-block; z-index:2; }
+.menu-container { display:flex; flex-direction:column; width:250px; align-items:center; position:relative; z-index:2; }
+input, select, button { margin:5px 0; width:200px; height:28px; font-size:14px; border-radius:3px; }
+button { cursor:pointer; border:none; color:white; background-image:url('Res/Gui/BDef.png'); background-size:cover; background-repeat:no-repeat; outline:none; }
+button:hover, button:active { background-image:url('Res/Gui/BClick.png'); }
+.version-info { position:absolute; top:20px; right:20px; font-size:14px; color:white; z-index:2; }
+.version-info span { color:#0000FF; }
 </style>
 </head>
 <body>
 <img src="Res/logo.png" alt="Logo" class="logo">
 <div id="splashContainer"></div>
-<div class="menu-container">
-<select id="versionSelect">
-<option value="Minecraft4kOLD.html">Minecraft4k-OLD</option>
-<option value="Minecraft4k.html">Minecraft4k</option>
-<option value="VVVVVV.html">VVVVVV4k</option>
-<option value="Miners4k.html">Miners4k</option>
-<option value="SonicRacer4k.html">SonicRacer4k</option>
-<option value="Left4kDeadTest.html">Left4kDeadTest</option>
-</select>
-<button onclick="launchVersion()">LAUNCH</button>
-</div>
+<div class="menu-container" id="userArea"></div>
 <div class="version-info">Version: <span id="versionText">0.5.3</span></div>
 <div class="panel"></div>
 <script>
@@ -157,6 +50,73 @@ function launchVersion(){
     if(selectedVersion) window.location.href=selectedVersion;
     else alert('Please select a version first!');
 }
+function sendForm(username, password, action){
+    fetch('auth.php', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:`username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=${action}`
+    })
+    .then(res=>res.json())
+    .then(data=>{
+        alert(data.message);
+        if(data.success) loadUserArea();
+    });
+}
+function register(){
+    const u=document.getElementById('regUsername').value;
+    const p=document.getElementById('regPassword').value;
+    sendForm(u,p,'register');
+}
+function login(){
+    const u=document.getElementById('loginUsername').value;
+    const p=document.getElementById('loginPassword').value;
+    sendForm(u,p,'login');
+}
+function logout(){
+    fetch('auth.php', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'action=logout'
+    }).then(res=>res.json())
+      .then(data=>{
+        alert(data.message);
+        loadUserArea();
+    });
+}
+function loadUserArea(){
+    fetch('auth.php?action=status')
+        .then(res=>res.json())
+        .then(data=>{
+            const container=document.getElementById('userArea');
+            if(data.logged){
+                container.innerHTML=`
+                <p>Привет, ${data.username}!</p>
+                <select id="versionSelect">
+                    <option value="Minecraft4kOLD.html">Minecraft4k-OLD</option>
+                    <option value="Minecraft4k.html">Minecraft4k</option>
+                    <option value="VVVVVV.html">VVVVVV4k</option>
+                    <option value="Miners4k.html">Miners4k</option>
+                    <option value="SonicRacer4k.html">SonicRacer4k</option>
+                    <option value="Left4kDeadTest.html">Left4kDeadTest</option>
+                </select>
+                <button onclick="launchVersion()">LAUNCH</button>
+                <button onclick="logout()">Выйти</button>
+                `;
+            } else {
+                container.innerHTML=`
+                <h3>Регистрация</h3>
+                <input type="text" id="regUsername" placeholder="Логин">
+                <input type="password" id="regPassword" placeholder="Пароль">
+                <button onclick="register()">Зарегистрироваться</button>
+                <h3>Вход</h3>
+                <input type="text" id="loginUsername" placeholder="Логин">
+                <input type="password" id="loginPassword" placeholder="Пароль">
+                <button onclick="login()">Войти</button>
+                `;
+            }
+        });
+}
+loadUserArea();
 </script>
 </body>
 </html>
